@@ -1,0 +1,8 @@
+<engine:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:engine="UnityEngine.UIElements" xmlns:editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <engine:VisualElement style="flex-grow: 1;">
+        <engine:IntegerField label="Scale" value="10000" name="Scale" />
+        <engine:FloatField label="Interval" value="0.033" name="Interval" />
+        <engine:VisualElement name="Steps" style="flex-grow: 1;" />
+        <engine:Button text="Run Steps" name="RunSteps" double-click-selects-word="false" triple-click-selects-line="false" />
+    </engine:VisualElement>
+</engine:UXML>

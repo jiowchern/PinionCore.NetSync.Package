@@ -1,0 +1,9 @@
+<engine:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:engine="UnityEngine.UIElements" xmlns:editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <engine:VisualElement style="flex-grow: 1; align-content: auto; align-items: auto; justify-content: flex-start; align-self: auto; flex-shrink: 1;">
+        <engine:VisualElement style="flex-grow: 1; flex-direction: row; align-self: stretch; align-content: auto; align-items: auto; justify-content: space-between;">
+            <engine:Label text="Hash" style="align-items: auto; align-content: auto;" />
+            <engine:Label text="--" name="VersionHesh" parse-escape-sequences="true" style="align-self: auto; align-content: auto; align-items: auto; -unity-font-style: bold;" />
+        </engine:VisualElement>
+    </engine:VisualElement>
+    <engine:VisualElement name="BinderEvent" style="flex-grow: 1; -unity-text-outline-width: 0; border-top-width: 2px; border-right-width: 2px; border-bottom-width: 2px; border-left-width: 2px; border-top-left-radius: 5px; border-top-right-radius: 5px; border-bottom-right-radius: 5px; border-bottom-left-radius: 5px;" />
+</engine:UXML>

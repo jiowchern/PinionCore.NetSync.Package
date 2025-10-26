@@ -1,0 +1,23 @@
+{
+  "name": "com.pinioncore.netsync",
+  "version": "0.0.1",
+  "displayName": "PinionCore NetSync",
+  "description": "Unity network synchronization package based on PinionCore.Remote framework. Implements Remote Method Invocation (RMI) with Soul-Ghost architecture for client-server networking.",
+  "unity": "2022.2",
+  "type": "library",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jiowchern/PinionCore.NetSync.Package.git"
+  },
+  "author": {
+    "name": "jiowchern"
+  },
+  "license": "MIT",
+  "keywords": [
+    "networking",
+    "multiplayer",
+    "rmi",
+    "remote",
+    "synchronization"
+  ]
+}
