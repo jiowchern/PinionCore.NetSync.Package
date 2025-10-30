@@ -1,0 +1,8 @@
+{
+  "name": "com.pinioncore.netsync",
+  "version": "0.0.1",
+  "displayName": "PinionCore NetSync",
+  "description": "This is an network connection synchronization kid.\nFor details, see https://github.com/jiowchern/PinionCore.NetSync.",
+  "unity": "2022.2",
+  "type": "library"
+}

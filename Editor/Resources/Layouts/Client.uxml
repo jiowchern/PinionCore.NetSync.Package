@@ -1,0 +1,12 @@
+<engine:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:engine="UnityEngine.UIElements" xmlns:editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <engine:VisualElement style="flex-grow: 1; align-content: auto; align-items: auto; justify-content: flex-start;">
+        <engine:VisualElement name="VisualElement" style="flex-grow: 1; flex-direction: row; align-content: auto; align-self: stretch; align-items: auto; transform-origin: center; opacity: 1; scale: 1 1; justify-content: space-between; -unity-font-definition: url(&quot;project://database/Assets/TextMesh%20Pro/Fonts/LiberationSans.ttf?fileID=12800000&amp;guid=e3265ab4bf004d28a9537516768c1c75&amp;type=3#LiberationSans&quot;);">
+            <engine:Label text="Hash" enabled="true" style="align-self: stretch; align-items: auto; align-content: auto; justify-content: flex-start; -unity-font-definition: url(&apos;project://database/Assets/UI%20Toolkit/UnityThemes/UnityDefaultRuntimeTheme.tss?fileID=2230732570650464555&amp;guid=f1736f0b51e847d46a5f636a0b36d04b&amp;type=3#NotInter-Regular&apos;);" />
+            <engine:Label text="--" name="VersionHesh" emoji-fallback-support="false" style="width: auto; position: relative; -unity-text-align: upper-right; right: auto; align-self: stretch; align-items: auto; align-content: auto; justify-content: flex-start; -unity-font-style: bold;" />
+        </engine:VisualElement>
+        <engine:VisualElement name="VisualElement" style="flex-grow: 1; flex-direction: row; align-items: auto; align-content: auto; align-self: stretch; justify-content: space-between; -unity-font-definition: url(&quot;project://database/Assets/TextMesh%20Pro/Fonts/LiberationSans.ttf?fileID=12800000&amp;guid=e3265ab4bf004d28a9537516768c1c75&amp;type=3#LiberationSans&quot;);">
+            <engine:Label text="Ping" style="align-items: auto; align-self: stretch; align-content: auto;" />
+            <engine:Label text="--" name="Ping" emoji-fallback-support="false" style="width: auto; position: relative; -unity-text-align: upper-right; right: 0; align-items: auto; align-content: auto; align-self: stretch; -unity-font-style: bold;" />
+        </engine:VisualElement>
+    </engine:VisualElement>
+</engine:UXML>
