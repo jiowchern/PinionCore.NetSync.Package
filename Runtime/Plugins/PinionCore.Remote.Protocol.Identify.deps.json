@@ -1,0 +1,24 @@
+{
+  "runtimeTarget": {
+    "name": ".NETStandard,Version=v2.1/",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETStandard,Version=v2.1": {},
+    ".NETStandard,Version=v2.1/": {
+      "PinionCore.Remote.Protocol.Identify/0.0.1.1": {
+        "runtime": {
+          "PinionCore.Remote.Protocol.Identify.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "PinionCore.Remote.Protocol.Identify/0.0.1.1": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

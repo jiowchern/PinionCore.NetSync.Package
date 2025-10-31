@@ -56,14 +56,6 @@
           }
         }
       },
-      "System.Threading.Tasks.Dataflow/6.0.0": {
-        "runtime": {
-          "lib/netstandard2.1/System.Threading.Tasks.Dataflow.dll": {
-            "assemblyVersion": "6.0.0.0",
-            "fileVersion": "6.0.21.52210"
-          }
-        }
-      },
       "PinionCore.Network/0.1.14.12": {
         "dependencies": {
           "PinionCore.Utility": "0.1.14.14"
@@ -79,8 +71,7 @@
         "dependencies": {
           "PinionCore.Network": "0.1.14.12",
           "PinionCore.Serialization": "0.1.14.12",
-          "PinionCore.Utility": "0.1.14.14",
-          "System.Threading.Tasks.Dataflow": "6.0.0"
+          "PinionCore.Utility": "0.1.14.14"
         },
         "runtime": {
           "PinionCore.Remote.dll": {
@@ -224,13 +215,6 @@
       "sha512": "sha512-3TIsJhD1EiiT0w2CcDMN/iSSwnNnsrnbzeVHSKkaEgV85txMprmuO+Yq2AdSbeVGcg28pdNDTPK87tJhX7VFHw==",
       "path": "system.runtime.compilerservices.unsafe/4.5.3",
       "hashPath": "system.runtime.compilerservices.unsafe.4.5.3.nupkg.sha512"
-    },
-    "System.Threading.Tasks.Dataflow/6.0.0": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-+tyDCU3/B1lDdOOAJywHQoFwyXIUghIaP2BxG79uvhfTnO+D9qIgjVlL/JV2NTliYbMHpd6eKDmHp2VHpij7MA==",
-      "path": "system.threading.tasks.dataflow/6.0.0",
-      "hashPath": "system.threading.tasks.dataflow.6.0.0.nupkg.sha512"
     },
     "PinionCore.Network/0.1.14.12": {
       "type": "project",
