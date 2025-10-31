@@ -18,7 +18,7 @@ namespace PinionCore.NetSync.Standalone
             {
                 _Stream = stream;
             }
-            IWaitableValue<int> IStreamable.Receive(byte[] buffer, int offset, int count)
+            IAwaitableSource<int> IStreamable.Receive(byte[] buffer, int offset, int count)
             {
                 var result = _Stream.Receive(buffer, offset, count);
 
@@ -31,7 +31,7 @@ namespace PinionCore.NetSync.Standalone
 
             
 
-            IWaitableValue<int> IStreamable.Send(byte[] buffer, int offset, int count)
+            IAwaitableSource<int> IStreamable.Send(byte[] buffer, int offset, int count)
             {
                 var result = _Stream.Send(buffer, offset, count);
                 var awaiter = result.GetAwaiter();
@@ -46,8 +46,13 @@ namespace PinionCore.NetSync.Standalone
             {
                 SendEvent(obj);
             }
+
+            public void Dispose()
+            {
+                
+            }
         }
-        private readonly NotifiableCollection<IStreamable> _Notice;
+        private readonly Depot<IStreamable> _Notice;
         
         bool _Listening;
 
@@ -55,7 +60,8 @@ namespace PinionCore.NetSync.Standalone
         readonly System.Collections.Generic.Dictionary<IStreamable, Peer> _Peers ;
         public Listener()
         {
-            _Notice = new PinionCore.Remote.NotifiableCollection<IStreamable>();
+            
+            _Notice = new PinionCore.Remote.Depot<IStreamable>();
             _Peers= new System.Collections.Generic.Dictionary<IStreamable, Peer>();
             _DataReceivedEvent += _Empty;
             _DataSendEvent += _Empty;

@@ -23,12 +23,12 @@ namespace PinionCore.NetSync.Web
             _TcpStream = peer;
         }
 
-        IWaitableValue<int> IStreamable.Receive(byte[] buffer, int offset, int count)
+        IAwaitableSource<int> IStreamable.Receive(byte[] buffer, int offset, int count)
         {
             return Receive(buffer, offset, count).ToWaitableValue();
         }
 
-        IWaitableValue<int> IStreamable.Send(byte[] buffer, int offset, int count)
+        IAwaitableSource<int> IStreamable.Send(byte[] buffer, int offset, int count)
         {
             return Send(buffer, offset, count).ToWaitableValue();
         }
@@ -200,6 +200,10 @@ namespace PinionCore.NetSync.Web
             // Send the Pong frame
             await _TcpStream.Send(pongFrame.ToArray(), 0, pongFrame.Count);
         }
-       
+
+        public void Dispose()
+        {
+            _TcpStream.Dispose();
+        }
     }
 }

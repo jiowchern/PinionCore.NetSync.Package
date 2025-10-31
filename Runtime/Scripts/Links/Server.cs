@@ -10,7 +10,7 @@ namespace PinionCore.NetSync
 
     public class Server : MonoBehaviour , PinionCore.Remote.IEntry
     {
-        public readonly IProtocol Protocol;
+        public IProtocol Protocol;
         public readonly Linstener Listener;
         public struct BinderCommand
         {
@@ -24,7 +24,7 @@ namespace PinionCore.NetSync
         }
         private readonly System.Collections.Concurrent.ConcurrentQueue<BinderCommand> _BinderOperator;
         public UnityEngine.Events.UnityEvent<BinderCommand> BinderEvent;                
-        private readonly SyncService _Service;
+        private SyncService _Service;
 
         public static bool EnableLog = false;
         [UnityEngine.RuntimeInitializeOnLoadMethod()]
@@ -40,9 +40,7 @@ namespace PinionCore.NetSync
         public Server() {
             
             _BinderOperator = new System.Collections.Concurrent.ConcurrentQueue<BinderCommand>();
-            Listener = new Linstener();
-            Protocol = ProtocolCreator.Create();
-            _Service = new PinionCore.Remote.Soul.SyncService(this, new UserProvider(Protocol, new Serializer(Protocol.SerializeTypes), Listener, new PinionCore.Remote.InternalSerializer(), PinionCore.Memorys.PoolProvider.Shared));            
+            Listener = new Linstener();            
         }
          [CreateProperty] public string Hash => Protocol.VersionCode.ToHexString();
 
@@ -68,6 +66,25 @@ namespace PinionCore.NetSync
             {
                 BinderEvent.Invoke(op);                
             }
+        }
+
+        public void OnDestroy()
+        {
+            IService service = _Service;
+            IListenable listenable = Listener;
+            listenable.StreamableLeaveEvent -= service.Leave;
+            listenable.StreamableEnterEvent -= service.Join;
+        }
+
+        public void Start()
+        {
+            Protocol = ProtocolCreator.Create();
+            _Service = new PinionCore.Remote.Soul.SyncService(this, Protocol, new Serializer(Protocol.SerializeTypes), new PinionCore.Remote.InternalSerializer(), PinionCore.Memorys.PoolProvider.Shared);
+
+            IService service = _Service;
+            IListenable listenable = Listener;
+            listenable.StreamableLeaveEvent += service.Leave;
+            listenable.StreamableEnterEvent += service.Join;
         }
     }
 }

@@ -9,14 +9,14 @@ namespace PinionCore.NetSync.Web
     {
         public readonly PinionCore.Network.Tcp.Listener Tcp;
         public readonly WebHandshark Handshark;
-        readonly PinionCore.Remote.NotifiableCollection<IStreamable> _NotifiableCollection;
+        readonly PinionCore.Remote.Depot<IStreamable> _Depot;
         public event System.Action<int> DataReceivedEvent;
         public event System.Action<int> DataSentEvent;
         public Listener()
         {
             DataReceivedEvent += (size) => { };
             DataSentEvent += (size) => { };
-            _NotifiableCollection = new NotifiableCollection<IStreamable>();
+            _Depot = new Depot<IStreamable>();
             Tcp = new Network.Tcp.Listener();
             Handshark = new WebHandshark(Tcp);
 
@@ -27,20 +27,20 @@ namespace PinionCore.NetSync.Web
         {
             peer.TcpPeer.BreakEvent += () =>
             {
-                lock (_NotifiableCollection)
+                lock (_Depot)
                 {
                     peer.TcpPeer.ReceiveEvent -= _Receive;
                     peer.TcpPeer.SendEvent -= _Send;
-                    _NotifiableCollection.Items.Remove(peer);
+                    _Depot.Items.Remove(peer);
                 }
 
             };
 
-            lock (_NotifiableCollection)
+            lock (_Depot)
             {
                 peer.TcpPeer.SendEvent += _Send;
                 peer.TcpPeer.ReceiveEvent += _Receive;
-                _NotifiableCollection.Items.Add(peer);
+                _Depot.Items.Add(peer);
             }
         }
 
@@ -48,12 +48,12 @@ namespace PinionCore.NetSync.Web
         {
             add
             {
-                _NotifiableCollection.Notifier.Supply += value;
+                _Depot.Notifier.Supply += value;
             }
 
             remove
             {
-                _NotifiableCollection.Notifier.Supply -= value;
+                _Depot.Notifier.Supply -= value;
             }
         }
 
@@ -63,12 +63,12 @@ namespace PinionCore.NetSync.Web
         {
             add
             {
-                _NotifiableCollection.Notifier.Unsupply += value;
+                _Depot.Notifier.Unsupply += value;
             }
 
             remove
             {
-                _NotifiableCollection.Notifier.Unsupply -= value;
+                _Depot.Notifier.Unsupply -= value;
             }
         }
 

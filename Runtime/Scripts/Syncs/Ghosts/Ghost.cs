@@ -12,11 +12,11 @@ namespace PinionCore.NetSync.Syncs.Ghosts
         {
             private readonly int Id_;
             private readonly INotifierQueryable Queryable_;
-            readonly PinionCore.Remote.NotifiableCollection<T> _NotifiableCollection ;
+            readonly PinionCore.Remote.Depot<T> _Depot ;
 
             public Notifier(int id,INotifierQueryable queryable)
             {
-                _NotifiableCollection = new PinionCore.Remote.NotifiableCollection<T>();
+                _Depot = new PinionCore.Remote.Depot<T>();
                 Id_ = id;
                 Queryable_ = queryable;
                 Queryable_.QueryNotifier<T>().Supply += _OnSupply;
@@ -29,7 +29,7 @@ namespace PinionCore.NetSync.Syncs.Ghosts
                 {
                     return;
                 }
-                _NotifiableCollection.Items.Remove(t);
+                _Depot.Items.Remove(t);
             }
 
             private void _OnSupply(T t)
@@ -38,7 +38,7 @@ namespace PinionCore.NetSync.Syncs.Ghosts
                 {
                     return;
                 }
-                _NotifiableCollection.Items.Add(t);
+                _Depot.Items.Add(t);
             }
 
             
@@ -46,12 +46,12 @@ namespace PinionCore.NetSync.Syncs.Ghosts
             {
                 add
                 {
-                    _NotifiableCollection.Notifier.Supply += value;
+                    _Depot.Notifier.Supply += value;
                 }
 
                 remove
                 {
-                    _NotifiableCollection.Notifier.Supply -= value;
+                    _Depot.Notifier.Supply -= value;
                 }
             }
 
@@ -60,12 +60,12 @@ namespace PinionCore.NetSync.Syncs.Ghosts
             {
                 add
                 {
-                    _NotifiableCollection.Notifier.Unsupply += value;
+                    _Depot.Notifier.Unsupply += value;
                 }
 
                 remove
                 {
-                    _NotifiableCollection.Notifier.Unsupply -= value;
+                    _Depot.Notifier.Unsupply -= value;
                 }
             }
 

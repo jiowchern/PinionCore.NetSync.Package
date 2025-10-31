@@ -9,7 +9,7 @@
             return protocol;
         }
         
-        [PinionCore.Remote.Protocol.Creater]
+        [PinionCore.Remote.Protocol.Creator]
         static partial void _Create(ref PinionCore.Remote.IProtocol protocol);
     }
 

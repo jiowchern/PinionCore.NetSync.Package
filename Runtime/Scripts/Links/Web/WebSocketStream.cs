@@ -100,13 +100,13 @@ namespace PinionCore.NetSync.Web
             }
         }
 
-        public IWaitableValue<int> Receive(byte[] buffer, int offset, int count)
+        public IAwaitableSource<int> Receive(byte[] buffer, int offset, int count)
         {
             UnityEngine.Debug.Log($"Receive: {count}");
             return _ReceiveStream.Receive(buffer, offset, count);
         }
 
-        public IWaitableValue<int> Send(byte[] buffer, int offset, int count)
+        public IAwaitableSource<int> Send(byte[] buffer, int offset, int count)
         {
             UnityEngine.Debug.Log($"Send: {count}");
 
@@ -170,6 +170,11 @@ namespace PinionCore.NetSync.Web
             {
                 instance.OnClose?.Invoke();
             }
+        }
+
+        public void Dispose()
+        {
+            Close();
         }
     }
 }
