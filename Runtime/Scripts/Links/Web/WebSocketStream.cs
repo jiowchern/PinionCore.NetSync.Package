@@ -171,5 +171,10 @@ namespace PinionCore.NetSync.Web
                 instance.OnClose?.Invoke();
             }
         }
+
+        public void Dispose()
+        {
+            Close();
+        }
     }
 }

@@ -16,7 +16,6 @@ namespace PinionCore.NetSync.Syncs.Ghosts
 
             public Notifier(int id,INotifierQueryable queryable)
             {
-                
                 _Depot = new PinionCore.Remote.Depot<T>();
                 Id_ = id;
                 Queryable_ = queryable;
@@ -113,7 +112,7 @@ namespace PinionCore.NetSync.Syncs.Ghosts
             _Notifiers.Add(typeof(T), notifier);
             return notifier;
         }
-        public void OnDestroy()
+        void OnDestroy()
         {
             foreach (var notifier in _Notifiers)
             {

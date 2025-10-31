@@ -1,44 +1,11 @@
 using PinionCore.NetSync.Syncs.Protocols;
 using PinionCore.Remote;
-using PinionCore.Utility;
 using System;
-using System.Reflection;
 using UnityEngine;
 
 
 namespace PinionCore.NetSync.Syncs.Souls
 {
-    public class UserBinder<T>
-    {
-        private readonly T _Owner;
-        readonly System.Collections.Generic.Dictionary<User, ISoul> _Binders;
-
-        public UserBinder(T owner)
-        {
-            _Binders = new System.Collections.Generic.Dictionary<User, ISoul>();
-            this._Owner = owner;
-        }
-        internal void Release()
-        {
-            throw new NotImplementedException();
-        }
-
-        internal void Bind(User user)
-        {
-            var soul = user.Binder.Bind(_Owner);
-            _Binders.Add(user, soul);
-        }
-
-        internal void Unbind(User user)
-        {
-            if(_Binders.TryGetValue(user, out var soul))
-            {
-                user.Binder.Unbind(soul);
-                _Binders.Remove(user);
-            }
-        }
-    }
-
     public class Transform : MonoBehaviour, Protocols.ITransform 
     {
         
@@ -47,7 +14,7 @@ namespace PinionCore.NetSync.Syncs.Souls
         readonly private PinionCore.Remote.Property<Vector3> _Scale;
         public float SyncInterval = 1f;
         float _TimeCounter;
-        readonly UserBinder<ITransform> _Binders;        
+        private ISoul _Soul;
 
         Property<Vector3> ITransform.Position => _Position;
 
@@ -59,7 +26,6 @@ namespace PinionCore.NetSync.Syncs.Souls
 
         public Transform()
         {
-            _Binders = new UserBinder<ITransform>(this);
             _Position = new Property<Vector3>();
             _Rotation = new Property<Quaternion>();
             _Scale = new Property<Vector3>();
@@ -70,23 +36,14 @@ namespace PinionCore.NetSync.Syncs.Souls
             _Rotation.Value = transform.rotation;
             _Scale.Value = transform.localScale;
 
-            
+            _Soul = gameObject.Bind<ITransform>(this);
+                      
         }
 
-        public void UserEnter(User user)
-        {
-            _Binders.Bind(user);
-         
-        }
-
-        public void UserLeave(User user)
-        {
-            _Binders.Unbind(user);
-         
-        }
+        
 
         // Update is called once per frame
-        public void Update()
+        void Update()
         {
             _TimeCounter += UnityEngine.Time.deltaTime;
             if (_TimeCounter < SyncInterval)
@@ -100,29 +57,28 @@ namespace PinionCore.NetSync.Syncs.Souls
 
         private bool _Sync(UnityEngine.Transform transform)
         {
-            if(!transform.hasChanged)
-                return false;
-            transform.hasChanged = false;
             // check if the transform has changed
             if (transform.position != _Position)
             {
-                _Position.Value = transform.position;                
+                _Position.Value = transform.position;
+                return true;
             }
             if (transform.rotation != _Rotation)
             {
-                _Rotation.Value = transform.rotation;                
+                _Rotation.Value = transform.rotation;
+                return true;
             }
             if (transform.localScale != _Scale)
             {
-                _Scale.Value = transform.localScale;                
+                _Scale.Value = transform.localScale;
+                return true;
             }
-            return true;
+            return false;
         }
 
         public void OnDestroy()
         {
-            _Binders.Release();
-          // gameObject.Unbind(_Soul);
+           gameObject.Unbind(_Soul);
         }
     }
 

@@ -200,6 +200,10 @@ namespace PinionCore.NetSync.Web
             // Send the Pong frame
             await _TcpStream.Send(pongFrame.ToArray(), 0, pongFrame.Count);
         }
-       
+
+        public void Dispose()
+        {
+            _TcpStream.Dispose();
+        }
     }
 }

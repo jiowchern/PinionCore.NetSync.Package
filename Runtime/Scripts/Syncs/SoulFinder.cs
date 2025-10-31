@@ -7,7 +7,7 @@ namespace PinionCore.NetSync.Syncs.Ghosts
 {
 }
 namespace PinionCore.NetSync.Syncs.Souls
-{/*
+{
     public static class SoulFinder
     {
         public static ISoul Bind<T>(this GameObject gameObject , T soul) where T : class, IObject
@@ -19,7 +19,7 @@ namespace PinionCore.NetSync.Syncs.Souls
 
             if (soulComponent == null)
             {
-                throw new System.Exception($"Soul component not found in {gameObject.name}");
+                return null;
             }
 
             return soulComponent.Bind(soul);
@@ -34,12 +34,12 @@ namespace PinionCore.NetSync.Syncs.Souls
 
             if (soulComponent == null)
             {
-                throw new System.Exception($"Soul component not found in {gameObject.name}");
+                return;
             }
 
             soulComponent.Unbind(soul);
         }
 
     }
-    */
+
 }

@@ -73,11 +73,11 @@ namespace PinionCore.NetSync.Syncs.Souls.Trackers
 
         public void Start()
         {
-            //_Soul = gameObject.Bind<ITracker>(this);
+            _Soul = gameObject.Bind<ITracker>(this);
         }
         public void OnDestroy()
         {
-            //gameObject.Unbind(_Soul);
+            gameObject.Unbind(_Soul);
         }
 
 

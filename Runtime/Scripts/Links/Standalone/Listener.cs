@@ -46,6 +46,11 @@ namespace PinionCore.NetSync.Standalone
             {
                 SendEvent(obj);
             }
+
+            public void Dispose()
+            {
+                
+            }
         }
         private readonly Depot<IStreamable> _Notice;
         
@@ -55,6 +60,7 @@ namespace PinionCore.NetSync.Standalone
         readonly System.Collections.Generic.Dictionary<IStreamable, Peer> _Peers ;
         public Listener()
         {
+            
             _Notice = new PinionCore.Remote.Depot<IStreamable>();
             _Peers= new System.Collections.Generic.Dictionary<IStreamable, Peer>();
             _DataReceivedEvent += _Empty;

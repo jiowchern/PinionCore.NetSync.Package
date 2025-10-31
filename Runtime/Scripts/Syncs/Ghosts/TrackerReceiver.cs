@@ -37,18 +37,24 @@ namespace PinionCore.NetSync.Syncs.Ghosts
 
         private void _OnUnsupply(ITracker tracker)
         {
+            UnityEngine.Debug.Log($"_OnUnsupply tracker:{tracker.Id}");
+
             tracker.OnTrackerEvent -= _OnTrackerEvent    ;
         }
 
         private void _OnSupply(ITracker tracker)
-        {            
+        {
+            UnityEngine.Debug.Log($"_OnSupply tracker:{tracker.Id}");
             tracker.OnTrackerEvent += _OnTrackerEvent;
         }
 
 
         private void _OnTrackerEvent(ZipTracker obj)
         {
-            _Tackers.Enqueue(obj.Unzip(Scale));            
+            _Tackers.Enqueue(obj.Unzip(Scale));
+            //Positions = _Tracker.Records.Select(r => r.Position).ToArray();
+            //ZipPositions = obj.Steps.Select(r => new Vector3(r.Position.X, r.Position.Y, r.Position.Z)).ToArray();
+            //_StepSeconds = 0;
         }
 
         public void Update()
