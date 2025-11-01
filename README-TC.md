@@ -72,6 +72,8 @@ PinionCore NetSync 為 Unity 專案提供傳輸層無關的狀態複寫能力。
 - **Sample 1** 與開發專案場景一致，介紹 Standalone、TCP 與 WebSocket 連線流程。
 - **Sample 2 – Chat** 展示協定切換與 UI 互動回饋。
 
+若需快速體驗，可造訪 <https://proxy.pinioncore.dpdns.org/sample2> 線上示範，直接觀察連線流程。
+
 ## 測試
 
 將套件嵌入專案後，可透過 Unity Test Runner（Edit Mode）執行 NUnit 測試。自動化時可使用：

@@ -72,6 +72,8 @@ Import the sample scenes from the Unity Package Manager window to review ready-m
 - **Sample 1** mirrors the development project scenes and walks through Standalone, TCP, and WebSocket connectors.
 - **Sample 2 – Chat** showcases protocol switching and UI feedback.
 
+A hosted build of Sample 2 is available at <https://proxy.pinioncore.dpdns.org/sample2> if you want to explore the connection flow without importing the package.
+
 ## Testing
 
 When the package is embedded in a project, run the NUnit suite via the Unity Test Runner (Edit Mode). For automation, use:
