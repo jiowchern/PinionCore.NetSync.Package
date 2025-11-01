@@ -101,15 +101,12 @@ namespace PinionCore.NetSync.Web
         }
 
         public IAwaitableSource<int> Receive(byte[] buffer, int offset, int count)
-        {
-            UnityEngine.Debug.Log($"Receive: {count}");
+        {            
             return _ReceiveStream.Receive(buffer, offset, count);
         }
 
         public IAwaitableSource<int> Send(byte[] buffer, int offset, int count)
         {
-            UnityEngine.Debug.Log($"Send: {count}");
-
             return _Send(buffer, offset, count).ToWaitableValue();
         }
 
