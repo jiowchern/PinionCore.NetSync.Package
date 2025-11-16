@@ -7,11 +7,11 @@ namespace PinionCore.NetSync.Syncs.Souls
     {
         public Server Server;
         public User UserPrefab;
-        readonly System.Collections.Generic.Dictionary<IBinder, User> _Binders;
+        readonly System.Collections.Generic.Dictionary<ISessionBinder, User> _Binders;
 
         public UserProvider()
         {
-            _Binders = new System.Collections.Generic.Dictionary<IBinder, User>();
+            _Binders = new System.Collections.Generic.Dictionary<ISessionBinder, User>();
         }
         public void Start()
         {

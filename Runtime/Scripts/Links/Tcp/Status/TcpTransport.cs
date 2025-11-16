@@ -29,11 +29,12 @@ namespace PinionCore.NetSync.Tcp.Status
             _Done = true;
         }
 
-        async void IStatus.Leave()
+        void IStatus.Leave()
         {
             _Peer.BreakEvent -= _Break;
-            _Agent.Disable();            
-            await _Connector.Disconnect();
+            _Agent.Disable();
+            System.IDisposable peerDispose = _Peer;
+            peerDispose?.Dispose();
         }
         void IStatus.Update()
         {

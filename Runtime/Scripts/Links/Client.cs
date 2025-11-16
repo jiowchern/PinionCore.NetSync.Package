@@ -18,10 +18,10 @@ namespace PinionCore.NetSync
 
         private Remote.Ghost.IAgent _QueryQueryer()
         {
-            
+
             if (_Agent == null)
             {
-                _Agent = PinionCore.Remote.Client.Provider.CreateAgent(_QueryProtocol());                
+                _Agent = new PinionCore.Remote.Ghost.Agent(_QueryProtocol());
             }
 
             return _Agent;
@@ -81,7 +81,7 @@ namespace PinionCore.NetSync
         public void Update()
         {
             _Ping = _QueryQueryer().Ping;
-            _QueryQueryer().HandleMessage();
+            _QueryQueryer().HandleMessages();
             _QueryQueryer().HandlePackets();
         }
 

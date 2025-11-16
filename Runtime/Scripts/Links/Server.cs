@@ -20,11 +20,11 @@ namespace PinionCore.NetSync
                 Remove
             }
             public OperatorStatus Status;
-            public IBinder Binder;
+            public ISessionBinder Binder;
         }
         private readonly System.Collections.Concurrent.ConcurrentQueue<BinderCommand> _BinderOperator;
-        public UnityEngine.Events.UnityEvent<BinderCommand> BinderEvent;                
-        private SyncService _Service;
+        public UnityEngine.Events.UnityEvent<BinderCommand> BinderEvent;
+        private PinionCore.Remote.Soul.SessionEngine _Service;
 
         public static bool EnableLog = false;
         [UnityEngine.RuntimeInitializeOnLoadMethod()]
@@ -44,12 +44,12 @@ namespace PinionCore.NetSync
         }
          [CreateProperty] public string Hash => Protocol.VersionCode.ToHexString();
 
-        void IBinderProvider.RegisterClientBinder(IBinder binder)
-        {            
+        void ISessionObserver.OnSessionOpened(ISessionBinder binder)
+        {
             _BinderOperator.Enqueue(new BinderCommand { Status = BinderCommand.OperatorStatus.Add, Binder = binder });
         }
 
-        void IBinderProvider.UnregisterClientBinder(IBinder binder)
+        void ISessionObserver.OnSessionClosed(ISessionBinder binder)
         {
             _BinderOperator.Enqueue(new BinderCommand { Status = BinderCommand.OperatorStatus.Remove, Binder = binder });
         }
@@ -79,9 +79,9 @@ namespace PinionCore.NetSync
         public void Start()
         {
             Protocol = ProtocolCreator.Create();
-            _Service = new PinionCore.Remote.Soul.SyncService(this, Protocol, new Serializer(Protocol.SerializeTypes), new PinionCore.Remote.InternalSerializer(), PinionCore.Memorys.PoolProvider.Shared);
+            _Service = new PinionCore.Remote.Soul.SessionEngine(this, Protocol, new Serializer(Protocol.SerializeTypes), new PinionCore.Remote.InternalSerializer(), PinionCore.Memorys.PoolProvider.Shared);
 
-            IService service = _Service;
+            PinionCore.Remote.Soul.IService service = _Service;
             IListenable listenable = Listener;
             listenable.StreamableLeaveEvent += service.Leave;
             listenable.StreamableEnterEvent += service.Join;

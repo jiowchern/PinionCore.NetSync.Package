@@ -24,7 +24,15 @@ namespace PinionCore.NetSync.Tcp.Status
         {
             try
             {
-                _Peer = await _Connector.Connect(_EndPoint);                
+                var result = await _Connector.ConnectAsync(_EndPoint);
+                if (result.Exception == null)
+                {
+                    _Peer = result.Peer;
+                }
+                else
+                {
+                    UnityEngine.Debug.Log(result.Exception);
+                }
             }
             catch (System.Exception e)
             {

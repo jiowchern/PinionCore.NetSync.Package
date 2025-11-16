@@ -9,11 +9,11 @@ namespace PinionCore.NetSync.Syncs.Souls
     {
         public Server Server;
         public Soul SoulPrefab;
-        readonly System.Collections.Generic.Dictionary<IBinder, Soul> _Binders;
+        readonly System.Collections.Generic.Dictionary<ISessionBinder, Soul> _Binders;
 
         public SoulProvider()
         {
-            _Binders = new System.Collections.Generic.Dictionary<IBinder, Soul>();
+            _Binders = new System.Collections.Generic.Dictionary<ISessionBinder, Soul>();
         }
         public void Start()
         {

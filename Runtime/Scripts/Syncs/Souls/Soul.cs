@@ -25,9 +25,9 @@ namespace PinionCore.NetSync.Syncs.Souls
         }
         
         static readonly PinionCore.Remote.Landlord<int> landlord = new PinionCore.Remote.Landlord<int>(new IntProvider());
-        IBinder _Binder;
+        ISessionBinder _Binder;
         private ISoul _Soul;
-        readonly System.Collections.Generic.HashSet<ISoul> _SoulSet;  
+        readonly System.Collections.Generic.HashSet<ISoul> _SoulSet;
         public readonly int Id;
 
         Property<int> IObject.Id => new Property<int>(gameObject.GetInstanceID());
@@ -42,13 +42,13 @@ namespace PinionCore.NetSync.Syncs.Souls
             landlord.Return(Id);
         }
 
-        public void Initial(IBinder binder)
+        public void Initial(ISessionBinder binder)
         {
             _Binder = binder;
             _Soul = _Binder.Bind<IObject>(this);
         }
 
-        public void Final(IBinder binder)
+        public void Final(ISessionBinder binder)
         {
             if(_Binder == binder)
             {

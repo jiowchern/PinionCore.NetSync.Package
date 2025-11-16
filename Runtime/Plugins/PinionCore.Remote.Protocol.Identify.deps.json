@@ -7,7 +7,7 @@
   "targets": {
     ".NETStandard,Version=v2.1": {},
     ".NETStandard,Version=v2.1/": {
-      "PinionCore.Remote.Protocol.Identify/0.0.1.1": {
+      "PinionCore.Remote.Protocol.Identify/0.2.0.0": {
         "runtime": {
           "PinionCore.Remote.Protocol.Identify.dll": {}
         }
@@ -15,7 +15,7 @@
     }
   },
   "libraries": {
-    "PinionCore.Remote.Protocol.Identify/0.0.1.1": {
+    "PinionCore.Remote.Protocol.Identify/0.2.0.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""

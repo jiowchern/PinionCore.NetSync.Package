@@ -5,10 +5,10 @@ namespace PinionCore.NetSync.Syncs.Souls
 {
     public class User : MonoBehaviour
     {
-        public IBinder _Binder;
-        public IBinder Binder => _Binder;
+        public ISessionBinder _Binder;
+        public ISessionBinder Binder => _Binder;
 
-        internal void Initial(IBinder binder)
+        internal void Initial(ISessionBinder binder)
         {
             throw new NotImplementedException();
         }

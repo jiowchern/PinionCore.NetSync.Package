@@ -7,13 +7,12 @@
   "targets": {
     ".NETStandard,Version=v2.1": {},
     ".NETStandard,Version=v2.1/": {
-      "PinionCore.Remote.Gateway/1.0.0": {
+      "PinionCore.Remote.Gateway/0.2.0.0": {
         "dependencies": {
-          "PinionCore.Network": "0.1.14.12",
-          "PinionCore.Remote.Client": "0.1.14.12",
-          "PinionCore.Remote.Gateway.Protocols": "1.0.0",
-          "PinionCore.Remote.Server": "0.1.14.13",
-          "PinionCore.Serialization": "0.1.14.12"
+          "PinionCore.Remote.Gateway.Protocols": "0.2.0",
+          "PinionCore.Remote.Ghost": "0.2.0",
+          "PinionCore.Remote.Soul": "0.2.0",
+          "PinionCore.Serialization": "0.2.0"
         },
         "runtime": {
           "PinionCore.Remote.Gateway.dll": {}
@@ -56,134 +55,130 @@
           }
         }
       },
-      "PinionCore.Network/0.1.14.12": {
+      "PinionCore.Network/0.2.0": {
         "dependencies": {
-          "PinionCore.Utility": "0.1.14.14"
+          "PinionCore.Utility": "0.2.0"
         },
         "runtime": {
           "PinionCore.Network.dll": {
-            "assemblyVersion": "0.1.14.12",
-            "fileVersion": "0.1.14.12"
+            "assemblyVersion": "0.2.0.0",
+            "fileVersion": "0.2.0.0"
           }
         }
       },
-      "PinionCore.Remote/0.1.14.15": {
+      "PinionCore.Remote/0.2.0": {
         "dependencies": {
-          "PinionCore.Network": "0.1.14.12",
-          "PinionCore.Serialization": "0.1.14.12",
-          "PinionCore.Utility": "0.1.14.14"
+          "PinionCore.Network": "0.2.0",
+          "PinionCore.Serialization": "0.2.0",
+          "PinionCore.Utility": "0.2.0"
         },
         "runtime": {
           "PinionCore.Remote.dll": {
-            "assemblyVersion": "0.1.14.15",
-            "fileVersion": "0.1.14.15"
+            "assemblyVersion": "0.2.0.0",
+            "fileVersion": "0.2.0.0"
           }
         }
       },
-      "PinionCore.Remote.Client/0.1.14.12": {
+      "PinionCore.Remote.Client/0.2.0": {
         "dependencies": {
-          "PinionCore.Network": "0.1.14.12",
-          "PinionCore.Remote": "0.1.14.15",
-          "PinionCore.Remote.Ghost": "0.1.14.13",
-          "PinionCore.Serialization": "0.1.14.12"
+          "PinionCore.Network": "0.2.0",
+          "PinionCore.Remote.Ghost": "0.2.0"
         },
         "runtime": {
           "PinionCore.Remote.Client.dll": {
-            "assemblyVersion": "0.1.14.12",
-            "fileVersion": "0.1.14.12"
+            "assemblyVersion": "0.2.0.0",
+            "fileVersion": "0.2.0.0"
           }
         }
       },
-      "PinionCore.Remote.Gateway.Protocols/1.0.0": {
+      "PinionCore.Remote.Gateway.Protocols/0.2.0": {
         "dependencies": {
-          "PinionCore.Remote": "0.1.14.15",
-          "PinionCore.Remote.Ghost": "0.1.14.13",
-          "PinionCore.Remote.Standalone": "0.1.14.14"
+          "PinionCore.Remote": "0.2.0",
+          "PinionCore.Remote.Ghost": "0.2.0",
+          "PinionCore.Remote.Standalone": "0.2.0"
         },
         "runtime": {
           "PinionCore.Remote.Gateway.Protocols.dll": {
-            "assemblyVersion": "1.0.0.0",
-            "fileVersion": "1.0.0.0"
+            "assemblyVersion": "0.2.0.0",
+            "fileVersion": "0.2.0.0"
           }
         }
       },
-      "PinionCore.Remote.Ghost/0.1.14.13": {
+      "PinionCore.Remote.Ghost/0.2.0": {
         "dependencies": {
-          "PinionCore.Network": "0.1.14.12",
-          "PinionCore.Remote": "0.1.14.15"
+          "PinionCore.Network": "0.2.0",
+          "PinionCore.Remote": "0.2.0"
         },
         "runtime": {
           "PinionCore.Remote.Ghost.dll": {
-            "assemblyVersion": "0.1.14.13",
-            "fileVersion": "0.1.14.13"
+            "assemblyVersion": "0.2.0.0",
+            "fileVersion": "0.2.0.0"
           }
         }
       },
-      "PinionCore.Remote.Server/0.1.14.13": {
+      "PinionCore.Remote.Server/0.2.0": {
         "dependencies": {
-          "PinionCore.Network": "0.1.14.12",
-          "PinionCore.Remote": "0.1.14.15",
-          "PinionCore.Remote.Soul": "0.1.14.14",
-          "PinionCore.Serialization": "0.1.14.12"
+          "PinionCore.Network": "0.2.0",
+          "PinionCore.Remote.Soul": "0.2.0"
         },
         "runtime": {
           "PinionCore.Remote.Server.dll": {
-            "assemblyVersion": "0.1.14.13",
-            "fileVersion": "0.1.14.13"
+            "assemblyVersion": "0.2.0.0",
+            "fileVersion": "0.2.0.0"
           }
         }
       },
-      "PinionCore.Remote.Soul/0.1.14.14": {
+      "PinionCore.Remote.Soul/0.2.0": {
         "dependencies": {
-          "PinionCore.Network": "0.1.14.12",
-          "PinionCore.Remote": "0.1.14.15"
+          "PinionCore.Network": "0.2.0",
+          "PinionCore.Remote": "0.2.0"
         },
         "runtime": {
           "PinionCore.Remote.Soul.dll": {
-            "assemblyVersion": "0.1.14.14",
-            "fileVersion": "0.1.14.14"
+            "assemblyVersion": "0.2.0.0",
+            "fileVersion": "0.2.0.0"
           }
         }
       },
-      "PinionCore.Remote.Standalone/0.1.14.14": {
+      "PinionCore.Remote.Standalone/0.2.0": {
         "dependencies": {
-          "PinionCore.Remote.Ghost": "0.1.14.13",
-          "PinionCore.Remote.Soul": "0.1.14.14"
+          "PinionCore.Remote.Client": "0.2.0",
+          "PinionCore.Remote.Server": "0.2.0"
         },
         "runtime": {
           "PinionCore.Remote.Standalone.dll": {
-            "assemblyVersion": "0.1.14.14",
-            "fileVersion": "0.1.14.14"
+            "assemblyVersion": "0.2.0.0",
+            "fileVersion": "0.2.0.0"
           }
         }
       },
-      "PinionCore.Serialization/0.1.14.12": {
+      "PinionCore.Serialization/0.2.0": {
         "dependencies": {
-          "PinionCore.Utility": "0.1.14.14"
+          "PinionCore.Utility": "0.2.0"
         },
         "runtime": {
           "PinionCore.Serialization.dll": {
-            "assemblyVersion": "0.1.14.12",
-            "fileVersion": "0.1.14.12"
+            "assemblyVersion": "0.2.0.0",
+            "fileVersion": "0.2.0.0"
           }
         }
       },
-      "PinionCore.Utility/0.1.14.14": {
+      "PinionCore.Utility/0.2.0": {
         "dependencies": {
           "System.Buffers": "4.5.1",
           "System.Memory": "4.5.5"
         },
         "runtime": {
           "PinionCore.Utility.dll": {
-            "assemblyVersion": "0.1.14.14",
-            "fileVersion": "0.1.14.14"
+            "assemblyVersion": "0.2.0.0",
+            "fileVersion": "0.2.0.0"
           }
         }
       }
     }
   },
   "libraries": {
-    "PinionCore.Remote.Gateway/1.0.0": {
+    "PinionCore.Remote.Gateway/0.2.0.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""
@@ -216,52 +211,52 @@
       "path": "system.runtime.compilerservices.unsafe/4.5.3",
       "hashPath": "system.runtime.compilerservices.unsafe.4.5.3.nupkg.sha512"
     },
-    "PinionCore.Network/0.1.14.12": {
+    "PinionCore.Network/0.2.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""
     },
-    "PinionCore.Remote/0.1.14.15": {
+    "PinionCore.Remote/0.2.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""
     },
-    "PinionCore.Remote.Client/0.1.14.12": {
+    "PinionCore.Remote.Client/0.2.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""
     },
-    "PinionCore.Remote.Gateway.Protocols/1.0.0": {
+    "PinionCore.Remote.Gateway.Protocols/0.2.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""
     },
-    "PinionCore.Remote.Ghost/0.1.14.13": {
+    "PinionCore.Remote.Ghost/0.2.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""
     },
-    "PinionCore.Remote.Server/0.1.14.13": {
+    "PinionCore.Remote.Server/0.2.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""
     },
-    "PinionCore.Remote.Soul/0.1.14.14": {
+    "PinionCore.Remote.Soul/0.2.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""
     },
-    "PinionCore.Remote.Standalone/0.1.14.14": {
+    "PinionCore.Remote.Standalone/0.2.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""
     },
-    "PinionCore.Serialization/0.1.14.12": {
+    "PinionCore.Serialization/0.2.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""
     },
-    "PinionCore.Utility/0.1.14.14": {
+    "PinionCore.Utility/0.2.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""
