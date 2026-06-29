@@ -18,22 +18,22 @@ namespace PinionCore.NetSync.Standalone
             {
                 _Stream = stream;
             }
-            IAwaitableSource<int> IStreamable.Receive(byte[] buffer, int offset, int count)
+            IAwaitableSource<int> IStreamable.Receive(byte[] buffer, int offset, int count, System.Threading.CancellationToken token)
             {
-                var result = _Stream.Receive(buffer, offset, count);
+                var result = _Stream.Receive(buffer, offset, count, token);
 
                 var awaiter = result.GetAwaiter();
                 awaiter.OnCompleted(() => _Receive(awaiter.GetResult()));
 
-                
+
                 return result;
             }
 
-            
 
-            IAwaitableSource<int> IStreamable.Send(byte[] buffer, int offset, int count)
+
+            IAwaitableSource<int> IStreamable.Send(byte[] buffer, int offset, int count, System.Threading.CancellationToken token)
             {
-                var result = _Stream.Send(buffer, offset, count);
+                var result = _Stream.Send(buffer, offset, count, token);
                 var awaiter = result.GetAwaiter();
                 awaiter.OnCompleted(() => _Send(awaiter.GetResult()));
                 return result;

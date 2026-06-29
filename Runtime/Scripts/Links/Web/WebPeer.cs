@@ -23,12 +23,12 @@ namespace PinionCore.NetSync.Web
             _TcpStream = peer;
         }
 
-        IAwaitableSource<int> IStreamable.Receive(byte[] buffer, int offset, int count)
+        IAwaitableSource<int> IStreamable.Receive(byte[] buffer, int offset, int count, System.Threading.CancellationToken token)
         {
             return Receive(buffer, offset, count).ToWaitableValue();
         }
 
-        IAwaitableSource<int> IStreamable.Send(byte[] buffer, int offset, int count)
+        IAwaitableSource<int> IStreamable.Send(byte[] buffer, int offset, int count, System.Threading.CancellationToken token)
         {
             return Send(buffer, offset, count).ToWaitableValue();
         }
@@ -38,7 +38,7 @@ namespace PinionCore.NetSync.Web
 
             if (_WebPeer.HasPendingSegments())
             {
-                var popSize = await _WebPeer.Pop(buffer, offset, count);
+                var popSize = await _WebPeer.Pop(buffer, offset, count, System.Threading.CancellationToken.None);
                 if (popSize > 0)
                 {
                     return popSize;
@@ -105,8 +105,8 @@ namespace PinionCore.NetSync.Web
                     payloadData[i] ^= maskingKey[i % 4];
                 }
 
-                var pushSize = await _WebPeer.Push(payloadData, 0, payloadData.Length);
-                var popSize = await _WebPeer.Pop(buffer, offset, count);
+                var pushSize = await _WebPeer.Push(payloadData, 0, payloadData.Length, System.Threading.CancellationToken.None);
+                var popSize = await _WebPeer.Pop(buffer, offset, count, System.Threading.CancellationToken.None);
 
                 return popSize;
             }
@@ -150,7 +150,7 @@ namespace PinionCore.NetSync.Web
             int totalSent = 0;
             while (totalSent < frameBytes.Length)
             {
-                int sent = await _TcpStream.Send(frameBytes, totalSent, frameBytes.Length - totalSent);
+                int sent = await _TcpStream.Send(frameBytes, totalSent, frameBytes.Length - totalSent, System.Threading.CancellationToken.None);
                 if (sent == 0)
                 {
                     throw new InvalidOperationException("Connection closed while sending data.");
@@ -168,7 +168,7 @@ namespace PinionCore.NetSync.Web
             int totalRead = 0;
             while (totalRead < count)
             {
-                int read = await _TcpStream.Receive(buffer, totalRead, count - totalRead);
+                int read = await _TcpStream.Receive(buffer, totalRead, count - totalRead, System.Threading.CancellationToken.None);
                 if (read == 0)
                 {
                     throw new InvalidOperationException("Connection closed while reading data.");
@@ -192,13 +192,13 @@ namespace PinionCore.NetSync.Web
             if (payloadLength > 0)
             {
                 byte[] payloadData = new byte[payloadLength];
-                await _TcpStream.Receive(payloadData, 0, payloadLength);
+                await _TcpStream.Receive(payloadData, 0, payloadLength, System.Threading.CancellationToken.None);
                 pongFrame.AddRange(payloadData);
             }
 
             UnityEngine.Debug.Log("Sending Pong frame");
             // Send the Pong frame
-            await _TcpStream.Send(pongFrame.ToArray(), 0, pongFrame.Count);
+            await _TcpStream.Send(pongFrame.ToArray(), 0, pongFrame.Count, System.Threading.CancellationToken.None);
         }
 
         public void Dispose()

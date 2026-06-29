@@ -100,12 +100,12 @@ namespace PinionCore.NetSync.Web
             }
         }
 
-        public IAwaitableSource<int> Receive(byte[] buffer, int offset, int count)
-        {            
-            return _ReceiveStream.Receive(buffer, offset, count);
+        public IAwaitableSource<int> Receive(byte[] buffer, int offset, int count, System.Threading.CancellationToken token)
+        {
+            return _ReceiveStream.Receive(buffer, offset, count, token);
         }
 
-        public IAwaitableSource<int> Send(byte[] buffer, int offset, int count)
+        public IAwaitableSource<int> Send(byte[] buffer, int offset, int count, System.Threading.CancellationToken token)
         {
             return _Send(buffer, offset, count).ToWaitableValue();
         }
@@ -144,7 +144,7 @@ namespace PinionCore.NetSync.Web
             {
                 byte[] data = new byte[length];
                 Marshal.Copy(bufferPtr, data, 0, length);
-                var pushCount = await instance._ReceiveStream.Send(data, 0, length);
+                var pushCount = await instance._ReceiveStream.Send(data, 0, length, System.Threading.CancellationToken.None);
             }
         }
 

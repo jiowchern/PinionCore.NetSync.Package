@@ -49,7 +49,7 @@ namespace PinionCore.NetSync.Web
             // handshark here
             IStreamable streamable = peer;
             var buffer = new byte[1024];
-            var readed = await streamable.Receive(buffer, 0, buffer.Length);
+            var readed = await streamable.Receive(buffer, 0, buffer.Length, System.Threading.CancellationToken.None);
             if (readed == 0)
             {
                 return;
@@ -78,7 +78,7 @@ namespace PinionCore.NetSync.Web
             {
                 while (sended < response_bytes.Length)
                 {
-                    int count = await streamable.Send(response_bytes, sended, response_bytes.Length - sended);
+                    int count = await streamable.Send(response_bytes, sended, response_bytes.Length - sended, System.Threading.CancellationToken.None);
                     if (count == 0)
                         return;
                     sended += count;
