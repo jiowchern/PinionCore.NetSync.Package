@@ -6,9 +6,8 @@ PinionCore NetSync delivers a transport-agnostic state replication layer for Uni
 
 - Transport abstraction with built-in Standalone loopback, TCP, and WebSocket connectors.
 - Ghost/Soul replication pipeline for binding authoritative objects and projecting synchronized "ghosts" on remote clients.
-- Tracker utilities that interpolate and compress transform data (zip encoding, repeat minimization).
 - Inspector extensions for monitoring protocol hashes, latency, throughput, and binder membership.
-- NUnit-based regression tests for trackers and networking primitives.
+- NUnit-based regression tests for networking primitives.
 
 ## Installation
 
@@ -48,9 +47,9 @@ Whenever you update NetSync, update the `PinionCore.Remote` submodule as well to
    - Invoke the connector’s `Connect`/`Disconnect` methods from gameplay code or UI (see `PinionCore.NetSync.Develop/Assets/PinionCore/Sample1/Scripts` for usage patterns).
 
 3. **Synchronizing objects**
-   - Attach `Syncs.Souls.Soul` to authoritative GameObjects and use `gameobject.Bind<T>()` (`SoulFinder`) to register protocol objects such as `Syncs.Souls.Transform` or `Syncs.Souls.TrackerSender`.
-   - On remote prefabs add `Syncs.Ghosts.Ghost` and the corresponding ghost behaviours (for example `Syncs.Ghosts.Transform` or `Syncs.Ghosts.TrackerReceiver`). Access incoming data through `gameObject.Query<T>()`.
-   - Tune replication cadence with tracker intervals or the `Transform.SyncInterval` property.
+   - Attach `Syncs.Souls.Soul` to authoritative GameObjects and use `gameobject.Bind<T>()` (`SoulFinder`) to register protocol objects such as `Syncs.Souls.Transform`.
+   - On remote prefabs add `Syncs.Ghosts.Ghost` and the corresponding ghost behaviours (for example `Syncs.Ghosts.Transform`). Access incoming data through `gameObject.Query<T>()`.
+   - Tune replication cadence with the `Transform.SyncInterval` property.
 
 4. **Runtime diagnostics**
    - Enable logging by setting `Client.EnableLog` or `Server.EnableLog` before initialization.

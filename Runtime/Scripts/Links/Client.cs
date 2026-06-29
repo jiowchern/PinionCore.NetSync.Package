@@ -13,7 +13,10 @@ namespace PinionCore.NetSync
     {
         
         PinionCore.Remote.Ghost.IAgent _Agent;
+
+        public IProtocol Protocol => _QueryProtocol();
         IProtocol _Protocol;
+        public ProtocolProvider Provider;
         public PinionCore.Remote.INotifierQueryable Queryer => _QueryQueryer();
 
         private Remote.Ghost.IAgent _QueryQueryer()
@@ -27,18 +30,20 @@ namespace PinionCore.NetSync
             return _Agent;
         }
 
-        public IProtocol Protocol => _QueryProtocol();
+
 
         private IProtocol _QueryProtocol()
         {
+            if (Provider == null)
+                return null;
             if (_Protocol == null)
             {
-                _Protocol = ProtocolCreator.Create();
+                _Protocol = Provider.Create();
             }
             return _Protocol;
         }
 
-        [CreateProperty] public string Hash => _QueryProtocol().VersionCode.ToHexString();
+        [CreateProperty] public string Hash => Protocol != null ? Protocol.VersionCode.ToHexString() : "null";
         float _Ping;
         //[CreateProperty] public float Ping =>  ;
         [CreateProperty] public float Ping => _Ping;

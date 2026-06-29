@@ -25,9 +25,15 @@ namespace PinionCore.NetSync.Editor
             
             asset.CloneTree(root);
 
+            serializedObject.Update();
+
+            var providerProperty = serializedObject.FindProperty("Provider");
+            var providerField = new PropertyField(providerProperty);
+            providerField.Bind(serializedObject);
+            root.Insert(0, providerField);
+
             var binderevent = root.Q<VisualElement>("BinderEvent");
 
-            serializedObject.Update();
             var testEventProperty = serializedObject.FindProperty("BinderEvent");
             var testEventField = new PropertyField(testEventProperty);
             testEventField.Bind(serializedObject);

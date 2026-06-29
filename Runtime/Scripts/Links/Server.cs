@@ -1,7 +1,7 @@
 ﻿using PinionCore.NetSync.Extensions;
 using PinionCore.Remote;
 using PinionCore.Remote.Soul;
-
+using System;
 using Unity.Properties;
 using UnityEngine;
 
@@ -10,7 +10,21 @@ namespace PinionCore.NetSync
 
     public class Server : MonoBehaviour , PinionCore.Remote.IEntry
     {
-        public IProtocol Protocol;
+        public IProtocol Protocol => _Query();
+        IProtocol _Protocol;
+
+        private IProtocol _Query()
+        {
+            if (Provider == null)
+                return null;
+            if (_Protocol == null)
+            {
+                _Protocol = Provider.Create() ;
+            }
+            return _Protocol;
+        }
+
+        public ProtocolProvider Provider;
         public readonly Linstener Listener;
         public struct BinderCommand
         {
@@ -42,7 +56,7 @@ namespace PinionCore.NetSync
             _BinderOperator = new System.Collections.Concurrent.ConcurrentQueue<BinderCommand>();
             Listener = new Linstener();            
         }
-         [CreateProperty] public string Hash => Protocol.VersionCode.ToHexString();
+         [CreateProperty] public string Hash => Protocol != null ? Protocol.VersionCode.ToHexString() : "null";
 
         void ISessionObserver.OnSessionOpened(ISessionBinder binder)
         {
@@ -78,7 +92,7 @@ namespace PinionCore.NetSync
 
         public void Start()
         {
-            Protocol = ProtocolCreator.Create();
+           
             _Service = new PinionCore.Remote.Soul.SessionEngine(this, Protocol, new Serializer(Protocol.SerializeTypes), new PinionCore.Remote.InternalSerializer(), PinionCore.Memorys.PoolProvider.Shared);
 
             PinionCore.Remote.Soul.IService service = _Service;

@@ -1,11 +1,10 @@
 using System.Linq;
 using UnityEditor;
+using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 using PinionCore.NetSync.Extensions;
-using static UnityEngine.GraphicsBuffer;
 using Unity.Properties;
-using System.Net.NetworkInformation;
 namespace PinionCore.NetSync.Editor
 {
 
@@ -20,18 +19,27 @@ namespace PinionCore.NetSync.Editor
         }
         public override VisualElement CreateInspectorGUI()
         {
-            return base.CreateInspectorGUI();
-            /*var element = new VisualElement();
-            var root = EditorGUIUtility.Load("Packages/com.pinioncore.netsync/Editor/Resources/Layouts/Client.uxml") as VisualTreeAsset ;
-            if(root == null)
+            var root = new VisualElement();
+
+            var asset = EditorGUIUtility.Load("Packages/com.pinioncore.netsync/Editor/Resources/Layouts/Client.uxml") as VisualTreeAsset;
+            if (asset == null)
                 return base.CreateInspectorGUI();
-            root.CloneTree(element);
-            var version = element.Q<Label>("VersionHesh");
+
+            asset.CloneTree(root);
+
+            serializedObject.Update();
+            var providerProperty = serializedObject.FindProperty("Provider");
+            var providerField = new PropertyField(providerProperty);
+            providerField.Bind(serializedObject);
+            root.Insert(0, providerField);
+
+            var version = root.Q<Label>("VersionHesh");
             version.SetTextBinding(_Target, nameof(_Target.Hash), BindingMode.ToTarget);
 
-            var ping = element.Q<Label>("Ping");
+            var ping = root.Q<Label>("Ping");
             ping.SetTextBinding(_Target, nameof(_Target.Ping), BindingMode.ToTarget);
-            return element;*/
+
+            return root;
         }
 
 
