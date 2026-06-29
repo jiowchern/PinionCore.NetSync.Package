@@ -1,98 +1,262 @@
-# PinionCore NetSync Package
+# PinionCore NetSync
 
-PinionCore NetSync delivers a transport-agnostic state replication layer for Unity projects. It wraps the lower-level PinionCore.Remote transport stack and exposes Unity-friendly components for building authoritative server/client experiences.
+> An authoritative state-replication package for Unity — write networked logic as if it were local.
 
-## Features
+PinionCore NetSync is built on top of the [PinionCore.Remote](https://github.com/jiowchern/PinionCore.Remote) RMI
+framework. It wraps the low-level stream, serialization, and packet plumbing and exposes just a few Unity
+components and ScriptableObject assets. On the server you write **plain C# logic on authoritative objects (Souls)**;
+clients automatically receive matching **proxy objects (Ghosts)** — with no hand-written packets, serialization,
+or RPC dispatch in between.
 
-- Transport abstraction with built-in Standalone loopback, TCP, and WebSocket connectors.
-- Ghost/Soul replication pipeline for binding authoritative objects and projecting synchronized "ghosts" on remote clients.
-- Inspector extensions for monitoring protocol hashes, latency, throughput, and binder membership.
-- NUnit-based regression tests for networking primitives.
+- **Language**：English ｜ [繁體中文](./README-TC.md)
+- **Unity**：2022.2 or newer (developed on Unity 6000.2)
+- **Platforms**：Standalone, WebGL (WebGL uses WebSocket)
 
-## Installation
+---
 
-### Option 1 — Git dependency
-Reference the package directly in `Packages/manifest.json`:
+## Why NetSync
 
-```json
+### 1. Write networked logic as if it were local (Soul–Ghost + RMI)
+An authoritative object on the server (**Soul**) is just a normal C# class — your game logic and its state live
+together. Clients automatically receive a matching proxy (**Ghost**); reading its properties and calling its
+methods feels exactly like working with a local object. You **never** define message formats, write
+`if (msgType == ...)` dispatch code, or handle serialization yourself.
+
+### 2. An interface *is* the protocol — type-safe at compile time
+Define your protocol with an ordinary **C# interface**; a Source Generator emits the matching wire protocol at
+compile time.
+- Declare state as `Property<T>` → value changes replicate to every client automatically.
+- Methods returning `Value<T>` → become network-wide Remote Method Invocations.
+- Every protocol carries a **VersionCode**: server and client compare it during the handshake, so a mismatched
+  protocol is rejected immediately instead of failing mysteriously mid-session.
+
+### 3. Focus on game logic, not networking boilerplate
+You only do three things: **(1)** define *what* to sync with an interface, **(2)** set the state on the Soul side,
+**(3)** read it on the Ghost side. Packets, serialization, and connection management are handled for you, and
+object creation/destruction is driven automatically by `SoulProvider` / `GhostProvider`.
+
+### 4. Swap the transport freely; the same game code runs everywhere
+| Transport | Components | Best for |
+|-----------|-----------|----------|
+| **Standalone** | `Standalone.Connector` / `Standalone.Listener` | In-process loopback: in-editor testing, single-player simulation, unit tests — **no sockets at all** |
+| **TCP** | `Tcp.TcpConnector` / `Tcp.TcpListener` | Reliable, ordered default transport |
+| **WebSocket** | `Web.WebConnector` / `Web.WebListener` | WebGL builds, firewall traversal |
+
+Switching transport means swapping one component — not a single line of game logic changes.
+
+### 5. Reactive object lifecycle — no manual spawn messages
+When the server creates or destroys an authoritative object, clients **instantiate or destroy** the matching Ghost
+automatically through `INotifier<T>`'s `Supply` / `Unsupply` events. Objects entering/leaving view, players
+joining/leaving — all event-driven.
+
+### 6. Configuration as assets (ScriptableObject)
+Both the protocol (`ProtocolProvider`) and the connection endpoint (`ConnectionConfig`) are shareable,
+serializable `.asset` files:
+- Assign the same protocol asset to both Server and Client → they are guaranteed to use the same protocol version.
+- Assign the same connection asset to a Listener and a Connector → ports can't drift out of sync.
+- Tweaking endpoints or protocols needs no code change and no recompile.
+
+### 7. Built-in runtime diagnostics
+The Inspectors for `Server`, `Client`, and each Listener / Connector surface the protocol hash, ping, and
+bytes sent/received — handy for confirming both ends agree on the protocol and the link is healthy.
+
+---
+
+## Quick Start
+
+The walkthrough below uses a custom player object `IPlayer` (one replicated health value + one remote method).
+
+### Step 0 — Install
+Add the dependency to your Unity project's `Packages/manifest.json`:
+
+```jsonc
 {
   "dependencies": {
+    // Git reference
     "com.pinioncore.netsync": "https://github.com/jiowchern/PinionCore.NetSync.git?path=PinionCore.NetSync.Package"
+    // or a local path reference:
+    // "com.pinioncore.netsync": "file:../PinionCore.NetSync.Package"
   }
 }
 ```
 
-### Option 2 — Local package
-If this repository is cloned next to your Unity project, add:
+### Step 1 — Define your protocol with an interface
+A protocol is just a C# interface that inherits `IObject`. Use `Property<T>` for state to replicate, and methods
+returning `Value<T>` for RMIs the client invokes and the server executes:
 
-```json
+```csharp
+using PinionCore.NetSync.Syncs.Protocols; // IObject
+using PinionCore.Remote;
+
+public interface IPlayer : IObject
 {
-  "dependencies": {
-    "com.pinioncore.netsync": "file:../PinionCore.NetSync.Package"
-  }
+    Property<int> Hp { get; }       // state: changes replicate to clients automatically
+    Value<bool> Hurt(int amount);   // RMI: client calls, server executes
 }
 ```
 
-Whenever you update NetSync, update the `PinionCore.Remote` submodule as well to keep transport APIs in sync.
+> **Important**: the protocol Source Generator only scans the **assembly it lives in**. Declare your protocol
+> interfaces in **your own project assembly** — every protocol interface declared there is included automatically,
+> along with the `IObject` they inherit.
 
-## Quick start
+### Step 2 — Add the protocol creator and a Provider asset
+In the same assembly, add the entry point that triggers the Source Generator, then wrap it as an assignable asset
+via a `ScriptableObject`:
 
-1. **Authoritative side (server)**
-   - Place a `Server` component in the scene.
-   - Add the listener that matches your transport (`Standalone.Listener`, `Tcp.TcpListener`, or `Web.WebListener`) and call its bind method during initialization (`Bind()` for Standalone, `Bind(port)` for TCP/Web).
-   - Subscribe to `Server.BinderEvent` to react whenever clients register or unregister binders.
+```csharp
+using UnityEngine;
+using PinionCore.NetSync;
 
-2. **Client side**
-   - Add a `Client` component and choose a connector (`Standalone.Connector`, `Tcp.TcpConnector`, or `Web.WebConnector`).
-   - Invoke the connector’s `Connect`/`Disconnect` methods from gameplay code or UI (see `PinionCore.NetSync.Develop/Assets/PinionCore/Sample1/Scripts` for usage patterns).
+public static partial class ProtocolCreator
+{
+    public static PinionCore.Remote.IProtocol Create()
+    {
+        PinionCore.Remote.IProtocol protocol = null;
+        _Create(ref protocol);
+        return protocol;
+    }
 
-3. **Synchronizing objects**
-   - Attach `Syncs.Souls.Soul` to authoritative GameObjects and use `gameobject.Bind<T>()` (`SoulFinder`) to register protocol objects such as `Syncs.Souls.Transform`.
-   - On remote prefabs add `Syncs.Ghosts.Ghost` and the corresponding ghost behaviours (for example `Syncs.Ghosts.Transform`). Access incoming data through `gameObject.Query<T>()`.
-   - Tune replication cadence with the `Transform.SyncInterval` property.
+    [PinionCore.Remote.Protocol.Creator] // triggers the Source Generator over this assembly's interfaces
+    static partial void _Create(ref PinionCore.Remote.IProtocol protocol);
+}
 
-4. **Runtime diagnostics**
-   - Enable logging by setting `Client.EnableLog` or `Server.EnableLog` before initialization.
-   - Inspector extensions for `Server`, `Client`, listeners, and connectors expose protocol hashes, ping, throughput, and binder membership.
+[CreateAssetMenu(menuName = "MyGame/Protocol Provider", fileName = "GameProtocol")]
+public class GameProtocolProvider : ProtocolProvider
+{
+    public override PinionCore.Remote.IProtocol Create() => ProtocolCreator.Create();
+}
+```
 
-## Architecture
+Right-click in the Project window → Create → `MyGame/Protocol Provider` to create a `GameProtocol.asset`.
 
-- **Links** (`Runtime/Scripts/Links`): transport abstractions and `ProtocolCreator` that bridge to PinionCore.Remote streams.
-- **Syncs** (`Runtime/Scripts/Syncs`): Ghost/Soul binding utilities, tracker compression, and notifier infrastructure.
-- **Extensions**: helper methods such as `GameObject.Bind<T>()`, `GameObject.Unbind()`, `GameObject.Query<T>()`, and UI label binding utilities.
-- **Editor** (`Editor/Scripts`): UI Toolkit inspectors and supporting assets.
-- **Tests** (`Tests/`): NUnit fixtures covering tracker sampling, compression, and networking contracts.
-- **Analyzers** (`Analyzers/`): Roslyn analyzers executed by CI.
+### Step 3 — Implement the Soul (server) and Ghost (client)
+
+**Server side**: a `MonoBehaviour` that implements `IPlayer` and registers itself as an authoritative object in
+`Start()` with `gameObject.Bind<IPlayer>(this)` (the `SoulFinder` extension):
+
+```csharp
+using PinionCore.NetSync.Syncs.Protocols;
+using PinionCore.NetSync.Syncs.Souls; // SoulFinder
+using PinionCore.Remote;
+using UnityEngine;
+
+public class PlayerSoul : MonoBehaviour, IPlayer
+{
+    readonly Property<int> _Hp = new Property<int>();
+
+    Property<int> IPlayer.Hp => _Hp;
+    Property<int> IObject.Id => new Property<int>(gameObject.GetInstanceID());
+
+    ISoul _Soul;
+
+    void Start()
+    {
+        _Hp.Value = 100;
+        _Soul = gameObject.Bind<IPlayer>(this); // register the authoritative object
+    }
+
+    // Runs on the server when a client invokes it (RMI)
+    Value<bool> IPlayer.Hurt(int amount)
+    {
+        _Hp.Value -= amount;   // the change replicates to every client automatically
+        return _Hp.Value > 0;  // implicitly wrapped into Value<bool>
+    }
+
+    void OnDestroy() => gameObject.Unbind(_Soul);
+}
+```
+
+**Client side**: derive from `GhostMonoBehaviour<IPlayer>`; the package calls you back when the proxy is supplied or
+removed, and you just read properties or call methods:
+
+```csharp
+using PinionCore.NetSync.Syncs.Ghosts; // GhostMonoBehaviour
+using UnityEngine;
+
+public class PlayerGhost : GhostMonoBehaviour<IPlayer>
+{
+    protected override void _OnSupply(IPlayer player)
+    {
+        Debug.Log($"player joined with HP = {player.Hp.Value}");
+
+        var result = player.Hurt(10);                  // RMI → executes on the server
+        result.OnValue += alive => Debug.Log($"still alive: {alive}");
+    }
+
+    protected override void _OnUnsupply(IPlayer player) { }
+}
+```
+
+Put `PlayerSoul` together with `Soul` on the **Soul prefab**; put `PlayerGhost` together with `Ghost` on the
+**Ghost prefab**.
+
+### Step 4 — Set up the server scene
+On a GameObject:
+
+1. Add the `Server` component and assign `GameProtocol.asset` to its **Provider** field.
+2. Add a listener (e.g. `Tcp.TcpListener`), create a `Tcp Connection Config` asset
+   (Create → `PinionCore/NetSync/Tcp Connection Config`, set the Port), assign it to the listener's **Config**
+   field, and call `Bind()` during initialization.
+3. Add `Syncs.Souls.SoulProvider`, point its `Server` field at the server, and assign the **Soul prefab** above.
+
+When a client connects, `SoulProvider` automatically instantiates one Soul prefab for that session, and destroys
+it on disconnect.
+
+### Step 5 — Set up the client scene
+On a GameObject:
+
+1. Add the `Client` component and assign the **same** `GameProtocol.asset` to its **Provider** field.
+2. Add the matching connector (e.g. `Tcp.TcpConnector`), assign a `Tcp Connection Config` (Host + Port matching the
+   server) to its **Config** field, and call `Connect()` when you want to connect.
+3. Add `Syncs.Ghosts.GhostProvider`, point its `Client` field at the client, and assign the **Ghost prefab** above.
+
+When the server supplies an object, `GhostProvider` instantiates the Ghost prefab automatically and destroys it on
+removal.
+
+### Step 6 — Run
+Start the server scene first (`Bind()`), then the client scene (`Connect()`). To verify everything in a single
+scene without opening sockets, swap the transport for `Standalone.Listener` / `Standalone.Connector`.
+
+> Prefer to grab the proxy without deriving from `GhostMonoBehaviour<T>`? Use `gameObject.Query<IPlayer>()`
+> (the `GhostFinder` extension) to get an `INotifier<IPlayer>` and subscribe to `Supply` / `Unsupply` yourself.
+
+---
+
+## Architecture at a glance
+
+```
+Runtime/Scripts/
+├── Links/                 Connection & transport
+│   ├── Server / Client    Unity entry points for PinionCore.Remote (MonoBehaviour)
+│   ├── ProtocolProvider   Protocol-source abstraction (ScriptableObject)
+│   ├── ConnectionConfig   Endpoint abstraction (ScriptableObject)
+│   ├── Standalone/        In-process loopback transport
+│   ├── Tcp/               TCP transport + TcpConnectionConfig
+│   └── Web/               WebSocket transport + WebConnectionConfig
+└── Syncs/                 Soul–Ghost synchronization
+    ├── Protocols/         Protocol interfaces such as IObject
+    ├── Souls/             Server-side authoritative objects (Soul, SoulProvider)
+    └── Ghosts/            Client-side proxy objects (Ghost, GhostMonoBehaviour, GhostProvider)
+```
+
+- **Soul**: the server-side authoritative object that runs the real game logic.
+- **Ghost**: the client-side proxy that reflects server state.
+- **SoulProvider / GhostProvider**: instantiate/destroy Soul / Ghost prefabs in response to session and object events.
+- **Extension methods**: `gameObject.Bind<T>()`, `gameObject.Unbind()`, `gameObject.Query<T>()`.
+
+---
 
 ## Samples
 
-Import the sample scenes from the Unity Package Manager window to review ready-made setups:
+Import the bundled samples from the Unity Package Manager:
 
-- **Sample 1** mirrors the development project scenes and walks through Standalone, TCP, and WebSocket connectors.
-- **Sample 2 – Chat** showcases protocol switching and UI feedback.
+- **Sample 1**: basic connection across the Standalone / TCP / WebSocket transports.
+- **Sample 2 – Chat**: a chat application demonstrating interface-defined login, player, and chat protocols.
 
-A hosted build of Sample 2 is available at <https://proxy.pinioncore.dpdns.org/sample2> if you want to explore the connection flow without importing the package.
+Try Sample 2 online: <https://proxy.pinioncore.dpdns.org/sample2>
 
-## Testing
-
-When the package is embedded in a project, run the NUnit suite via the Unity Test Runner (Edit Mode). For automation, use:
-
-```powershell
-"<UnityEditorPath>\Unity.exe" -projectPath <your-project> -quit -batchmode -runTests -testPlatform EditMode -testResults Logs/editmode.xml
-```
-
-Ensure the analyzers in `Analyzers/` are executed as part of your CI to catch API and style regressions.
-
-## Versioning
-
-- The package version is defined in `package.json`.
-- Keep `PinionCore.Remote` on the same tag across all consumers.
-- Document user-facing changes in `CHANGELOG.md`.
-
-## Support
-
-Report issues and feature requests in the main repository tracker. Include Unity version, transport type, reproduction steps, and relevant logs.
+---
 
 ## License
 
-The package inherits the repository’s `LICENSE`.
+This package is released under the [MIT License](./LICENSE).
