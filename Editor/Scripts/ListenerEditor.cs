@@ -1,4 +1,5 @@
 ﻿using UnityEditor;
+using UnityEditor.UIElements;
 using UnityEngine.UIElements;
 using PinionCore.NetSync.Extensions;
 using PinionCore.NetSync.Tcp;
@@ -57,6 +58,20 @@ namespace PinionCore.NetSync.Editor
             var receive = element.Q<Label>("Receive");
             receive.SetTextBinding(this, nameof(_DataReceiveds), BindingMode.ToTarget);
 
+            // Config 欄位:僅在目標具有序列化的 Config 欄位時顯示 (TCP/Web)。
+            // Standalone 監聽器沒有 Config,故移除該 PropertyField。
+            var configField = element.Q<PropertyField>("ConfigField");
+            if (configField != null)
+            {
+                if (serializedObject.FindProperty("Config") == null)
+                {
+                    configField.RemoveFromHierarchy();
+                }
+                else
+                {
+                    element.Bind(serializedObject);
+                }
+            }
 
             return element;
         }

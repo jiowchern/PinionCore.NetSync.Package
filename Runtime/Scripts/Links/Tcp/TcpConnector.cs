@@ -25,6 +25,10 @@ namespace PinionCore.NetSync.Tcp
         }
 
         readonly PinionCore.Utility.StatusMachine _StatusMachine;
+
+        [Tooltip("連線設定資產;呼叫無參數的 Connect() 時會使用此設定。")]
+        public TcpConnectionConfig Config;
+
         public UnityEngine.Events.UnityEvent<ConnectResult> ConnectResultEvent;
         public UnityEngine.Events.UnityEvent ConnectBreakEvent;
         [CreateProperty] public ConnectorStatus CurrentStatus { get; private set; }
@@ -46,6 +50,25 @@ namespace PinionCore.NetSync.Tcp
             _StatusMachine.Termination();
         }
       
+        /// <summary>
+        /// 使用指派的 <see cref="Config"/> 資產進行連線。
+        /// </summary>
+        public void Connect()
+        {
+            if (Config == null)
+            {
+                UnityEngine.Debug.LogError($"[{nameof(TcpConnector)}] Config 未指派,無法連線。", this);
+                return;
+            }
+            var endPoint = Config.ToEndPoint();
+            if (endPoint == null)
+            {
+                UnityEngine.Debug.LogError($"[{nameof(TcpConnector)}] Config 的位址 '{Config.Host}' 不是合法的 IPv4 位址。", this);
+                return;
+            }
+            _ToConnect(endPoint);
+        }
+
         public void Connect(EndPoint endPoint)
         {
             _ToConnect(endPoint);

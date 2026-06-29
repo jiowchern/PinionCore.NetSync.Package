@@ -15,6 +15,9 @@ namespace PinionCore.NetSync.Web
     {
         
 
+        [Tooltip("連線設定資產;呼叫無參數的 Bind() 時會使用其 Url 解析出的連接埠。")]
+        public WebConnectionConfig Config;
+
         public bool IsListening { get; private set; }
 
         bool IListenerEditor.IsActive => IsListening;
@@ -57,6 +60,25 @@ namespace PinionCore.NetSync.Web
             {
                 _DataSendEvent -= value;
             }
+        }
+
+        /// <summary>
+        /// 使用指派的 <see cref="Config"/> 資產 (從 Url 解析出的連接埠) 開始監聽。
+        /// </summary>
+        public void Bind()
+        {
+            if (Config == null)
+            {
+                UnityEngine.Debug.LogError($"[{nameof(WebListener)}] Config 未指派,無法監聽。", this);
+                return;
+            }
+            var port = Config.Port;
+            if (port < 0)
+            {
+                UnityEngine.Debug.LogError($"[{nameof(WebListener)}] 無法從 Url '{Config.Url}' 解析出連接埠。", this);
+                return;
+            }
+            Bind(port);
         }
 
         public void Bind(int port)

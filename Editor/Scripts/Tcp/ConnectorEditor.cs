@@ -1,6 +1,7 @@
 ﻿using PinionCore.NetSync.Extensions;
 using PinionCore.NetSync.Tcp;
 using UnityEditor;
+using UnityEditor.UIElements;
 using UnityEngine.UIElements;
 
 namespace PinionCore.NetSync.Editor.Tcp
@@ -33,6 +34,9 @@ namespace PinionCore.NetSync.Editor.Tcp
 
             var receive = element.Q<Label>("Receive");
             receive.SetTextBinding(_Target, nameof(_Target.BytesReceived), BindingMode.ToTarget);
+
+            // 綁定序列化欄位 (Config) 至 uxml 中的 PropertyField。
+            element.Bind(serializedObject);
 
             return element;
         }

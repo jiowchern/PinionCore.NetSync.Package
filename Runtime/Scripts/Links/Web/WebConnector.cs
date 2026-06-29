@@ -11,6 +11,9 @@ namespace PinionCore.NetSync.Web
 
         readonly PinionCore.Utility.StatusMachine _StatusMachine;
 
+        [Tooltip("連線設定資產;呼叫無參數的 Connect() 時會使用其中的 Url。")]
+        public WebConnectionConfig Config;
+
         public bool IsConnected { get; private set; }
         public WebConnector()
         {
@@ -31,6 +34,24 @@ namespace PinionCore.NetSync.Web
         {
             IsConnected = false;
             _StatusMachine.Termination();
+        }
+
+        /// <summary>
+        /// 使用指派的 <see cref="Config"/> 資產的 Url 進行連線。
+        /// </summary>
+        public void Connect()
+        {
+            if (Config == null)
+            {
+                UnityEngine.Debug.LogError($"[{nameof(WebConnector)}] Config 未指派,無法連線。", this);
+                return;
+            }
+            if (string.IsNullOrEmpty(Config.Url))
+            {
+                UnityEngine.Debug.LogError($"[{nameof(WebConnector)}] Config 的 Url 為空,無法連線。", this);
+                return;
+            }
+            _ToConnect(Config.Url);
         }
 
         public void Connect(string url)

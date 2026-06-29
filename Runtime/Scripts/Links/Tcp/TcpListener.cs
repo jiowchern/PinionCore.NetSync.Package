@@ -10,7 +10,10 @@ namespace PinionCore.NetSync.Tcp
     public class TcpListener : MonoBehaviour , IListenerEditor
     {
         private Listener _Listener;
-        
+
+        [Tooltip("連線設定資產;呼叫無參數的 Bind() 時會使用其中的 Port。")]
+        public TcpConnectionConfig Config;
+
         [CreateProperty] public long BytesReceived { get; private set; }
 
         
@@ -54,8 +57,21 @@ namespace PinionCore.NetSync.Tcp
             }
         }
 
+        /// <summary>
+        /// 使用指派的 <see cref="Config"/> 資產的連接埠開始監聽。
+        /// </summary>
+        public void Bind()
+        {
+            if (Config == null)
+            {
+                UnityEngine.Debug.LogError($"[{nameof(TcpListener)}] Config 未指派,無法監聽。", this);
+                return;
+            }
+            Bind(Config.Port);
+        }
+
         public void Bind(int port)
-        {            
+        {
             if (_IsActive)
             {
                 return;
