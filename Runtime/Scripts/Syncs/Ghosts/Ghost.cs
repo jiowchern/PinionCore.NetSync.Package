@@ -10,11 +10,11 @@ namespace PinionCore.NetSync.Syncs.Ghosts
     {
         class Notifier<T> : IDisposable, INotifier<T> where T : class, IObject
         {
-            private readonly int Id_;
+            private readonly EntityId Id_;
             private readonly INotifierQueryable Queryable_;
             readonly PinionCore.Remote.Depot<T> _Depot ;
 
-            public Notifier(int id,INotifierQueryable queryable)
+            public Notifier(EntityId id,INotifierQueryable queryable)
             {
                 _Depot = new PinionCore.Remote.Depot<T>();
                 Id_ = id;
@@ -79,7 +79,7 @@ namespace PinionCore.NetSync.Syncs.Ghosts
         readonly System.Collections.Generic.Dictionary<Type, IDisposable> _Notifiers;
         INotifierQueryable _Notifier;
 
-        [CreateProperty] public int Id { get; private set; }
+        [CreateProperty] public EntityId Id { get; private set; }
 
         public Ghost()
         {
@@ -98,7 +98,7 @@ namespace PinionCore.NetSync.Syncs.Ghosts
             {
                 return;
             }
-            Id = 0;
+            Id = EntityId.None;
         }
 
         public INotifier<T> Query<T>() where T : class, IObject

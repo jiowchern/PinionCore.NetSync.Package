@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   並偵測目標 asmdef 是否 reference `PinionCore.NetSync`、提供一鍵補上參考。
 
 ### Changed
+- 最低 Unity 版本需求由 `2022.2` 提升至 `6000.4`（Unity 6）。
 - `ProtocolProvider` 現在直接實作 `PinionCore.Remote.IProtocol`；抽象方法由 `Create()` 改名為 `Get()`。
   `Server` / `Client` 的 `Protocol` 直接回傳 `Provider` 本身。
   既有子類需把 `override ... Create()` 改為 `override ... Get()`。

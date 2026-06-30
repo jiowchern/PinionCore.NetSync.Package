@@ -9,7 +9,7 @@ clients automatically receive matching **proxy objects (Ghosts)** — with no ha
 or RPC dispatch in between.
 
 - **Language**：English ｜ [繁體中文](./README-TC.md)
-- **Unity**：2022.2 or newer (developed on Unity 6000.2)
+- **Unity**：6000.4 or newer (developed on Unity 6000.2)
 - **Platforms**：Standalone, WebGL (WebGL uses WebSocket)
 
 ---

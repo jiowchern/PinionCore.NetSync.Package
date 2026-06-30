@@ -8,7 +8,7 @@ PinionCore NetSync 建立在 [PinionCore.Remote](https://github.com/jiowchern/Pi
 中間不需要手寫任何封包、序列化或 RPC 派送程式碼。
 
 - **語言 / Language**：[English](./README-EN.md) ｜ 繁體中文
-- **Unity**：2022.2 以上（開發於 Unity 6000.2）
+- **Unity**：6000.4 以上（開發於 Unity 6000.2）
 - **平台**：Standalone、WebGL（WebGL 使用 WebSocket）
 
 ---

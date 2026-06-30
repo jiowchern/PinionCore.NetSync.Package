@@ -30,7 +30,7 @@ namespace PinionCore.NetSync.Syncs.Souls
         readonly System.Collections.Generic.HashSet<ISoul> _SoulSet;
         public readonly int Id;
 
-        Property<int> IObject.Id => new Property<int>(gameObject.GetInstanceID());
+        Property<EntityId> IObject.Id => new Property<EntityId>(gameObject.GetEntityId());
 
         public Soul()
         {
@@ -59,7 +59,7 @@ namespace PinionCore.NetSync.Syncs.Souls
 
         public ISoul Bind<T>(T soul) where T : class , IObject
         {
-            if (soul.Id != gameObject.GetInstanceID())
+            if (soul.Id != gameObject.GetEntityId())
                 return null;
             var s= _Binder.Bind(soul);
             _SoulSet.Add(s);

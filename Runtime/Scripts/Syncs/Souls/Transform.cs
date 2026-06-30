@@ -22,7 +22,7 @@ namespace PinionCore.NetSync.Syncs.Souls
 
         Property<Vector3> ITransform.Scale => _Scale;
 
-        Property<int> IObject.Id => new Property<int>(gameObject.GetInstanceID());
+        Property<EntityId> IObject.Id => new Property<EntityId>(gameObject.GetEntityId());
 
         public Transform()
         {

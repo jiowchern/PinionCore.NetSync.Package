@@ -9,10 +9,10 @@ namespace PinionCore.NetSync.Syncs.Ghosts
 
         public Ghost GhostPrefab;
 
-        readonly System.Collections.Generic.Dictionary<int, Ghost> _Ghosts;
+        readonly System.Collections.Generic.Dictionary<EntityId, Ghost> _Ghosts;
         public GhostProvider()
         {
-            _Ghosts = new System.Collections.Generic.Dictionary<int, Ghost>();
+            _Ghosts = new System.Collections.Generic.Dictionary<EntityId, Ghost>();
         }
 
         public void Start()

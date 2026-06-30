@@ -1,9 +1,11 @@
-﻿namespace PinionCore.NetSync.Syncs.Protocols
+﻿using UnityEngine;
+
+namespace PinionCore.NetSync.Syncs.Protocols
 {
 
     public interface IObject : PinionCore.Remote.Protocolable
     {
-        PinionCore.Remote.Property<int> Id { get; }
+        PinionCore.Remote.Property<EntityId> Id { get; }
     }
 }
 
