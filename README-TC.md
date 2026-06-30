@@ -92,14 +92,21 @@ public interface IPlayer : IObject
 > 請把協議介面宣告在**你自己的專案 assembly** 裡——在此宣告的每個協議介面都會被自動納入，
 > 它們所繼承的 `IObject` 也會一併納入。
 
-### Step 2 — 建立協議產生器與 Provider 資產
-在同一個 assembly 加入觸發 Source Generator 的進入點，再用 `ScriptableObject` 包成可指派的資產：
+### Step 2 — 產生協議三件套（Creator + Provider + 資產）
+協議需要三樣東西：觸發 Source Generator 的 `Creator`、把它包成可指派資產的 `Provider`（`ScriptableObject`），
+以及 Provider 的 `.asset` 實例。最簡單的方式是用內建精靈一鍵產生：
+
+> **選單** `Tools / PinionCore / NetSync / Create Protocol Provider...`
+> （或在 Project 視窗右鍵 → `Create / PinionCore / NetSync / Protocol Provider (三件套)`）
+> 填入名稱（例如 `Game`）與目標資料夾，按「建立三件套」。精靈會產生 `GameProtocolCreator.cs`、
+> `GameProtocolProvider.cs`，並在編譯完成後自動建立 `GameProtocol.asset`。
+> 若目標資料夾所屬的 asmdef 尚未 reference `PinionCore.NetSync`，精靈會提示並提供一鍵補上。
+
+精靈產生的程式碼如下（也可手動照抄建立）：
 
 ```csharp
-using UnityEngine;
-using PinionCore.NetSync;
-
-public static partial class ProtocolCreator
+// GameProtocolCreator.cs — 觸發 Source Generator，掃描本 assembly 的協議介面
+public static partial class GameProtocolCreator
 {
     public static PinionCore.Remote.IProtocol Create()
     {
@@ -108,18 +115,30 @@ public static partial class ProtocolCreator
         return protocol;
     }
 
-    [PinionCore.Remote.Protocol.Creator] // 觸發 Source Generator，掃描本 assembly 的協議介面
+    [PinionCore.Remote.Protocol.Creator]
     static partial void _Create(ref PinionCore.Remote.IProtocol protocol);
-}
-
-[CreateAssetMenu(menuName = "MyGame/Protocol Provider", fileName = "GameProtocol")]
-public class GameProtocolProvider : ProtocolProvider
-{
-    public override PinionCore.Remote.IProtocol Create() => ProtocolCreator.Create();
 }
 ```
 
-在 Project 視窗右鍵 → Create → `MyGame/Protocol Provider`，建立一顆 `GameProtocol.asset`。
+```csharp
+// GameProtocolProvider.cs — 包成可指派給 Server / Client 的資產
+using UnityEngine;
+
+[CreateAssetMenu(menuName = "PinionCore/NetSync/Game Protocol Provider", fileName = "GameProtocol")]
+public class GameProtocolProvider : PinionCore.NetSync.ProtocolProvider
+{
+    readonly PinionCore.Remote.IProtocol _Protocol;
+
+    public GameProtocolProvider()
+    {
+        _Protocol = GameProtocolCreator.Create();
+    }
+
+    public override PinionCore.Remote.IProtocol Get() => _Protocol;
+}
+```
+
+> **重點**：`Creator` 與你的協議介面必須位於**同一個 assembly**——Source Generator 只掃描當前組件。
 
 ### Step 3 — 實作 Soul（伺服器）與 Ghost（客戶端）
 

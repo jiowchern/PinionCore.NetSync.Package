@@ -1,7 +1,7 @@
 using PinionCore.NetSync.Extensions;
 
 using PinionCore.Remote;
-
+using System.Diagnostics.CodeAnalysis;
 using Unity.Properties;
 
 using UnityEngine;
@@ -14,8 +14,8 @@ namespace PinionCore.NetSync
         
         PinionCore.Remote.Ghost.IAgent _Agent;
 
-        public IProtocol Protocol => _QueryProtocol();
-        IProtocol _Protocol;
+        public IProtocol Protocol => _GetProtocol();
+
         public ProtocolProvider Provider;
         public PinionCore.Remote.INotifierQueryable Queryer => _QueryQueryer();
 
@@ -24,7 +24,7 @@ namespace PinionCore.NetSync
 
             if (_Agent == null)
             {
-                _Agent = new PinionCore.Remote.Ghost.Agent(_QueryProtocol());
+                _Agent = new PinionCore.Remote.Ghost.Agent(_GetProtocol());
             }
 
             return _Agent;
@@ -32,15 +32,9 @@ namespace PinionCore.NetSync
 
 
 
-        private IProtocol _QueryProtocol()
+        private IProtocol _GetProtocol()
         {
-            if (Provider == null)
-                return null;
-            if (_Protocol == null)
-            {
-                _Protocol = Provider.Create();
-            }
-            return _Protocol;
+            return Provider;
         }
 
         [CreateProperty] public string Hash => Protocol != null ? Protocol.VersionCode.ToHexString() : "null";

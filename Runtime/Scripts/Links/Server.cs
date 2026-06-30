@@ -10,19 +10,10 @@ namespace PinionCore.NetSync
 
     public class Server : MonoBehaviour , PinionCore.Remote.IEntry
     {
-        public IProtocol Protocol => _Query();
+        public IProtocol Protocol => Provider;
         IProtocol _Protocol;
 
-        private IProtocol _Query()
-        {
-            if (Provider == null)
-                return null;
-            if (_Protocol == null)
-            {
-                _Protocol = Provider.Create() ;
-            }
-            return _Protocol;
-        }
+      
 
         public ProtocolProvider Provider;
         public readonly Linstener Listener;

@@ -99,15 +99,23 @@ public interface IPlayer : IObject
 > interfaces in **your own project assembly** — every protocol interface declared there is included automatically,
 > along with the `IObject` they inherit.
 
-### Step 2 — Add the protocol creator and a Provider asset
-In the same assembly, add the entry point that triggers the Source Generator, then wrap it as an assignable asset
-via a `ScriptableObject`:
+### Step 2 — Generate the protocol trio (Creator + Provider + asset)
+A protocol needs three things: a `Creator` that triggers the Source Generator, a `Provider` (`ScriptableObject`)
+that wraps it into an assignable asset, and an `.asset` instance of that Provider. The easiest way is the built-in
+wizard:
+
+> **Menu** `Tools / PinionCore / NetSync / Create Protocol Provider...`
+> (or right-click in the Project window → `Create / PinionCore / NetSync / Protocol Provider (三件套)`)
+> Enter a name (e.g. `Game`) and a target folder, then click "建立三件套". The wizard generates
+> `GameProtocolCreator.cs` and `GameProtocolProvider.cs`, and after the recompile finishes it creates
+> `GameProtocol.asset` automatically. If the target folder's asmdef doesn't yet reference `PinionCore.NetSync`,
+> the wizard warns you and offers to add the reference with one click.
+
+The generated code looks like this (you can also write it by hand):
 
 ```csharp
-using UnityEngine;
-using PinionCore.NetSync;
-
-public static partial class ProtocolCreator
+// GameProtocolCreator.cs — triggers the Source Generator over this assembly's interfaces
+public static partial class GameProtocolCreator
 {
     public static PinionCore.Remote.IProtocol Create()
     {
@@ -116,18 +124,31 @@ public static partial class ProtocolCreator
         return protocol;
     }
 
-    [PinionCore.Remote.Protocol.Creator] // triggers the Source Generator over this assembly's interfaces
+    [PinionCore.Remote.Protocol.Creator]
     static partial void _Create(ref PinionCore.Remote.IProtocol protocol);
-}
-
-[CreateAssetMenu(menuName = "MyGame/Protocol Provider", fileName = "GameProtocol")]
-public class GameProtocolProvider : ProtocolProvider
-{
-    public override PinionCore.Remote.IProtocol Create() => ProtocolCreator.Create();
 }
 ```
 
-Right-click in the Project window → Create → `MyGame/Protocol Provider` to create a `GameProtocol.asset`.
+```csharp
+// GameProtocolProvider.cs — wraps the protocol into an asset assignable to Server / Client
+using UnityEngine;
+
+[CreateAssetMenu(menuName = "PinionCore/NetSync/Game Protocol Provider", fileName = "GameProtocol")]
+public class GameProtocolProvider : PinionCore.NetSync.ProtocolProvider
+{
+    readonly PinionCore.Remote.IProtocol _Protocol;
+
+    public GameProtocolProvider()
+    {
+        _Protocol = GameProtocolCreator.Create();
+    }
+
+    public override PinionCore.Remote.IProtocol Get() => _Protocol;
+}
+```
+
+> **Important**: the `Creator` and your protocol interfaces must live in the **same assembly** — the Source
+> Generator only scans the current assembly.
 
 ### Step 3 — Implement the Soul (server) and Ghost (client)
 
