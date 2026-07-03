@@ -3,20 +3,14 @@ using System;
 using UnityEngine;
 namespace PinionCore.NetSync.Syncs.Souls
 {
-    public class User : MonoBehaviour
+    public abstract class User : MonoBehaviour
     {
-        public ISessionBinder _Binder;
-        public ISessionBinder Binder => _Binder;
+        
 
-        internal void Initial(ISessionBinder binder)
-        {
-            throw new NotImplementedException();
-        }
+        public abstract void Initial(ISessionBinder binder);
 
-        internal void Final()
-        {
-            throw new NotImplementedException();
-        }
+        public abstract void Final(ISessionBinder binder);
+        
     }
 
 }

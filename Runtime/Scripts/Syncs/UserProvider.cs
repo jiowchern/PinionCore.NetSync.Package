@@ -38,7 +38,7 @@ namespace PinionCore.NetSync.Syncs.Souls
                     return;
                 }
                 var user = _Binders[cmd.Binder];
-                user.Final();
+                user.Final(cmd.Binder);
                 _Binders.Remove(cmd.Binder);
                 GameObject.Destroy(user.gameObject);
             }
