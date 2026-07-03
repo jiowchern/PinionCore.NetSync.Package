@@ -7,7 +7,7 @@ namespace PinionCore.NetSync.Standalone
 {
     [RequireComponent(typeof(Server))]
 
-    public class Listener : MonoBehaviour , IListenable , IListenerEditor
+    public class Listener : MonoBehaviour , IListenable , IListenerEditor , IBindable
     {
         class Peer : IStreamable
         {

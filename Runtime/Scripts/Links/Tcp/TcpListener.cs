@@ -7,7 +7,7 @@ namespace PinionCore.NetSync.Tcp
 {
     
     [RequireComponent(typeof(Server))]
-    public class TcpListener : MonoBehaviour , IListenerEditor
+    public class TcpListener : MonoBehaviour , IListenerEditor, IBindable
     {
         private Listener _Listener;
 

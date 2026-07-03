@@ -11,7 +11,7 @@ namespace PinionCore.NetSync.Web
 {
 
     [RequireComponent(typeof(Server))]
-    public class WebListener : MonoBehaviour , IListenerEditor
+    public class WebListener : MonoBehaviour , IListenerEditor , IBindable
     {
         
 
