@@ -10,7 +10,7 @@ namespace PinionCore.NetSync.Gateways
     /// 透過同物件上的 Connector(Tcp/Web/Standalone)連到 GatewayRouter 的 Session 端點,
     /// 即可經由 Router 同時與多個遊戲服務通訊,用法與 Client 相同(Queryer.QueryNotifier)。
     /// </summary>
-    public class GatewayClient : MonoBehaviour, IConnectableAgent
+    public class GatewayClient : MonoBehaviour, IConnectableAgent, IQueryerHost
     {
         [Tooltip("遊戲協議;VersionCode 用於 Router 的版本隔離,需與服務端一致。")]
         public ProtocolProvider Provider;

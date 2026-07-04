@@ -240,7 +240,8 @@ Runtime/Scripts/
 │   ├── ConnectionConfig   連線端點抽象 (ScriptableObject)
 │   ├── Standalone/        行程內回送傳輸
 │   ├── Tcp/               TCP 傳輸 + TcpConnectionConfig
-│   └── Web/               WebSocket 傳輸 + WebConnectionConfig
+│   ├── Web/               WebSocket 傳輸 + WebConnectionConfig
+│   └── Gateway/           分散式路由閘道 (GatewayRouter, GatewayRegistry, GatewayClient)
 └── Syncs/                 Soul–Ghost 同步系統
     ├── Protocols/         IObject 等協議介面
     ├── Souls/             伺服器端權威物件 (Soul, SoulProvider)
@@ -251,6 +252,71 @@ Runtime/Scripts/
 - **Ghost**：客戶端代理物件，反映伺服器狀態。
 - **SoulProvider / GhostProvider**：依連線與物件事件，自動實例化／銷毀 Soul / Ghost 預置物。
 - **擴充方法**：`gameObject.Bind<T>()`、`gameObject.Unbind()`、`gameObject.Query<T>()`。
+
+---
+
+## Gateway（分散式路由閘道）
+
+單一 `Server` 不敷使用時，可改用 Gateway 三層架構：客戶端只需**一條連線**連上中央 Router，
+就能同時與多個遊戲服務通訊。這是
+[PinionCore.Remote.Gateway](https://github.com/jiowchern/PinionCore.Remote) 的 Unity 封裝，
+元件位於 `PinionCore.NetSync.Gateways` 命名空間。
+
+| 角色 | 元件 | 職責 |
+|------|------|------|
+| **Router（路由）** | `GatewayRouter` + `GatewayRouterEndpoint` | 中央路由器。`Registry` 端點接受遊戲服務註冊、`Session` 端點接受客戶端連線，依 **Group** 與**協議版本**自動路由（同 Group 負載平衡、不同 Group 全部連上、版本不符互相隔離）。事件驅動，不需 Update。 |
+| **Registry（服務註冊）** | `GatewayRegistry` | 與 `Server` 掛在同一個 GameObject。向 Router 註冊自己的 Group，並把 Router 轉送來的玩家連線自動餵給 `Server`。 |
+| **Client（客戶端）** | `GatewayClient` | 取代 `Client`。連上 Router 的 Session 端點後，經路由同時取得多個服務的代理物件；用法與 `Client` 相同（`Queryer.QueryNotifier<T>()`）。 |
+
+既有的傳輸層元件**全部可以直接複用**：
+
+- Listener（`Tcp.TcpListener` / `Web.WebListener` / `Standalone.Listener`）可掛向任何 `IListenableHost` —— `Server` 或 `GatewayRouterEndpoint`。
+- Connector（`Tcp.TcpConnector` / `Web.WebConnector` / `Standalone.Connector`）可連向任何 `IConnectableAgent` —— `Client`、`GatewayClient` 或 `GatewayRegistry`。
+
+### 架設 Router
+
+1. 建立 GameObject，加入 `GatewayRouter`。
+2. 建立兩個**子物件**，各加入 `GatewayRouterEndpoint`，`Endpoint` 分別設為 **Registry** 與 **Session**
+   （未指派 `Router` 欄位時會自動往父物件尋找）。
+3. 在兩個子物件上各加入一個 Listener（例如 `Tcp.TcpListener` + 各自的 Config 資產），並呼叫 `Bind()`。
+
+```
+GatewayRouter (GameObject)
+├── RegistryEndpoint：GatewayRouterEndpoint(Registry) + TcpListener(Port 20001)
+└── SessionEndpoint： GatewayRouterEndpoint(Session)  + TcpListener(Port 20002)
+```
+
+### 架設遊戲服務（向 Router 註冊）
+
+在同一個 GameObject 上：
+
+1. `Server` —— 指派協議資產，`SoulProvider` 等照常使用。**不需要**再掛對外的 Listener，玩家連線由 Router 轉送進來。
+2. `GatewayRegistry` —— 指派**同一顆**協議資產、設定 `Group`。
+3. Connector（例如 `Tcp.TcpConnector`，Config 指向 Router 的 **Registry** 端點）—— 呼叫 `Connect()` 完成註冊。
+
+`Group` 的意義：**相同 Group** 的多個服務視為同類，Router 以輪詢做負載平衡；
+**不同 Group** 視為不同服務（例如大廳、戰鬥、聊天），客戶端會同時連上每個 Group。
+
+### 架設客戶端
+
+在同一個 GameObject 上：
+
+1. `GatewayClient` —— 指派**同一顆**協議資產。
+2. Connector（例如 WebGL 用 `Web.WebConnector`，Config 指向 Router 的 **Session** 端點）—— 呼叫 `Connect()`。
+3. `GhostProvider` —— 不指派 `Client` 欄位時，會自動使用同物件上的 `GatewayClient`。
+
+```csharp
+// 與 Client 相同的查詢方式
+gatewayClient.Queryer.QueryNotifier<IPlayer>().Supply += player => { /* ... */ };
+```
+
+### 注意事項
+
+- 協議的 `VersionCode` 是 Router 路由的隔離依據：`GatewayRegistry` 與 `GatewayClient` 必須使用**同一份協議**，
+  否則互相看不見。這也讓新舊版本服務可以同時掛在同一個 Router 上逐步升級。
+- Router 本身不需要協議資產，可獨立佈署於任何 Unity 執行個體（headless 亦可）。
+- 完整流程可參考套件測試 `Tests/GatewayTests.cs`：以 Standalone 傳輸在單一場景內
+  跑通 Router → Registry 註冊 → 客戶端連線 → 跨路由 RMI。
 
 ---
 

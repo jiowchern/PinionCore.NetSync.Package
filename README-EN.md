@@ -253,7 +253,8 @@ Runtime/Scripts/
 │   ├── ConnectionConfig   Endpoint abstraction (ScriptableObject)
 │   ├── Standalone/        In-process loopback transport
 │   ├── Tcp/               TCP transport + TcpConnectionConfig
-│   └── Web/               WebSocket transport + WebConnectionConfig
+│   ├── Web/               WebSocket transport + WebConnectionConfig
+│   └── Gateway/           Distributed routing gateway (GatewayRouter, GatewayRegistry, GatewayClient)
 └── Syncs/                 Soul–Ghost synchronization
     ├── Protocols/         Protocol interfaces such as IObject
     ├── Souls/             Server-side authoritative objects (Soul, SoulProvider)
@@ -264,6 +265,77 @@ Runtime/Scripts/
 - **Ghost**: the client-side proxy that reflects server state.
 - **SoulProvider / GhostProvider**: instantiate/destroy Soul / Ghost prefabs in response to session and object events.
 - **Extension methods**: `gameObject.Bind<T>()`, `gameObject.Unbind()`, `gameObject.Query<T>()`.
+
+---
+
+## Gateway (distributed routing)
+
+When a single `Server` is no longer enough, switch to the three-tier Gateway architecture: a client opens
+**one connection** to a central Router and communicates with multiple game services through it. These
+components wrap [PinionCore.Remote.Gateway](https://github.com/jiowchern/PinionCore.Remote) and live in the
+`PinionCore.NetSync.Gateways` namespace.
+
+| Role | Components | Responsibility |
+|------|-----------|----------------|
+| **Router** | `GatewayRouter` + `GatewayRouterEndpoint` | Central router. The `Registry` endpoint accepts game-service registrations, the `Session` endpoint accepts client connections, and sessions are routed automatically by **Group** and **protocol version** (same group → load balancing, different groups → connect to all, mismatched versions → isolated). Event-driven; no Update loop. |
+| **Registry** | `GatewayRegistry` | Lives on the same GameObject as a `Server`. Registers its Group with the Router and feeds player connections routed by the Router straight into the `Server`. |
+| **Client** | `GatewayClient` | Drop-in replacement for `Client`. Connects to the Router's Session endpoint and receives proxies from every routed service; used exactly like `Client` (`Queryer.QueryNotifier<T>()`). |
+
+All existing transport components are **reused as-is**:
+
+- Listeners (`Tcp.TcpListener` / `Web.WebListener` / `Standalone.Listener`) attach to any `IListenableHost` — a `Server` or a `GatewayRouterEndpoint`.
+- Connectors (`Tcp.TcpConnector` / `Web.WebConnector` / `Standalone.Connector`) connect any `IConnectableAgent` — a `Client`, `GatewayClient`, or `GatewayRegistry`.
+
+### Setting up the Router
+
+1. Create a GameObject and add `GatewayRouter`.
+2. Create two **child objects**, each with a `GatewayRouterEndpoint`; set `Endpoint` to **Registry** and
+   **Session** respectively (when the `Router` field is unassigned it is resolved from the parent).
+3. Add a listener to each child (e.g. `Tcp.TcpListener` with its own config asset) and call `Bind()`.
+
+```
+GatewayRouter (GameObject)
+├── RegistryEndpoint: GatewayRouterEndpoint(Registry) + TcpListener(Port 20001)
+└── SessionEndpoint:  GatewayRouterEndpoint(Session)  + TcpListener(Port 20002)
+```
+
+### Setting up a game service (registering with the Router)
+
+On a single GameObject:
+
+1. `Server` — assign the protocol asset; `SoulProvider` etc. work unchanged. **No public-facing listener is
+   needed** — player connections arrive through the Router.
+2. `GatewayRegistry` — assign the **same** protocol asset and set the `Group`.
+3. A connector (e.g. `Tcp.TcpConnector` with a config pointing at the Router's **Registry** endpoint) — call
+   `Connect()` to register.
+
+Group semantics: services with the **same Group** are treated as replicas and load-balanced round-robin;
+**different Groups** are distinct services (e.g. lobby, battle, chat) and a client connects to all of them.
+
+### Setting up the client
+
+On a single GameObject:
+
+1. `GatewayClient` — assign the **same** protocol asset.
+2. A connector (e.g. `Web.WebConnector` for WebGL, config pointing at the Router's **Session** endpoint) —
+   call `Connect()`.
+3. `GhostProvider` — leave its `Client` field unassigned and it automatically uses the `GatewayClient` on the
+   same GameObject.
+
+```csharp
+// Queried exactly like Client
+gatewayClient.Queryer.QueryNotifier<IPlayer>().Supply += player => { /* ... */ };
+```
+
+### Notes
+
+- The protocol `VersionCode` is what the Router uses for isolation: `GatewayRegistry` and `GatewayClient`
+  must share the **same protocol asset** or they will never see each other. This also lets old and new
+  service versions coexist on one Router during rolling upgrades.
+- The Router itself needs no protocol asset and can be deployed as a standalone (even headless) Unity instance.
+- For an end-to-end reference see the package test `Tests/GatewayTests.cs`: it drives
+  Router → Registry registration → client connection → cross-router RMI in a single scene over the
+  Standalone transport.
 
 ---
 
