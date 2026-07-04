@@ -11,7 +11,15 @@
     "allowUnsafeCode": false,
     "overrideReferences": true,
     "precompiledReferences": [
-        "nunit.framework.dll"
+        "nunit.framework.dll",
+        "PinionCore.Network.dll",
+        "PinionCore.Remote.dll",
+        "PinionCore.Remote.Ghost.dll",
+        "PinionCore.Remote.Soul.dll",
+        "PinionCore.Remote.Protocol.Identify.dll",
+        "PinionCore.Remote.Gateway.dll",
+        "PinionCore.Serialization.dll",
+        "PinionCore.Utility.dll"
     ],
     "autoReferenced": false,
     "defineConstraints": [

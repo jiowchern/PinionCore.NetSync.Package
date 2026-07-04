@@ -10,7 +10,6 @@ using System;
 namespace PinionCore.NetSync.Web
 {
 
-    [RequireComponent(typeof(Server))]
     public class WebListener : MonoBehaviour , IListenerEditor , IBindable
     {
         
@@ -88,11 +87,16 @@ namespace PinionCore.NetSync.Web
                 return;
             }
             
+            var host = GetComponent<IListenableHost>();
+            if (host == null)
+            {
+                UnityEngine.Debug.LogError($"[{nameof(WebListener)}] 找不到 {nameof(IListenableHost)} 元件(例如 Server / GatewayRouterEndpoint),無法監聽。", this);
+                return;
+            }
             var listener = new Listener();
-            var server = GetComponent<Server>();
-            server.Listener.Add(listener);
+            host.Listener.Add(listener);
             listener.Tcp.Bind(port,5);
-            
+
             listener.DataReceivedEvent += _Receive;
             listener.DataSentEvent += _Send;
 
@@ -101,7 +105,7 @@ namespace PinionCore.NetSync.Web
             {
                 listener.DataReceivedEvent -= _Receive;
                 listener.DataSentEvent -= _Send;
-                server.Listener.Remove(listener);
+                host.Listener.Remove(listener);
                 listener.Tcp.Close();
                 IsListening = false;
             };

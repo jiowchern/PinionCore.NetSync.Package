@@ -5,7 +5,6 @@ using UnityEngine;
 
 namespace PinionCore.NetSync.Web
 {
-    [RequireComponent(typeof(Client))]
     public class WebConnector : MonoBehaviour
     {
 
@@ -83,8 +82,14 @@ namespace PinionCore.NetSync.Web
 
         private void _ToTransport(WebSocketStream stream)
         {
+            var agent = GetComponent<IConnectableAgent>();
+            if (agent == null)
+            {
+                UnityEngine.Debug.LogError($"[{nameof(WebConnector)}] 找不到 {nameof(IConnectableAgent)} 元件(例如 Client / GatewayClient / GatewayRegistry),無法連線。", this);
+                _ToEmpty();
+                return;
+            }
             IsConnected = true;
-            var agent = GetComponent<Client>();
             var status = new Status.WebTransport(stream, agent);
             status.OfflineEvent += (err) =>
             {

@@ -8,8 +8,9 @@ using UnityEngine;
 namespace PinionCore.NetSync
 {
 
-    public class Server : MonoBehaviour , PinionCore.Remote.IEntry
+    public class Server : MonoBehaviour , PinionCore.Remote.IEntry , IListenableHost
     {
+        Linstener IListenableHost.Listener => Listener;
         public IProtocol Protocol => Provider;
         IProtocol _Protocol;
 

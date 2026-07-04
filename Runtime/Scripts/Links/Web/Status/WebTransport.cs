@@ -7,12 +7,12 @@ namespace PinionCore.NetSync.Web.Status
     class WebTransport : IStatus
     {
         private readonly WebSocketStream stream;
-        private readonly Client agent;
-        
+        private readonly IConnectableAgent agent;
+
 
         public event Action<string> OfflineEvent;
 
-        public WebTransport(WebSocketStream stream , Client agent)
+        public WebTransport(WebSocketStream stream , IConnectableAgent agent)
         {
         
             this.stream = stream;

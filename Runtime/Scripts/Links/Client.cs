@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace PinionCore.NetSync
 {
-    public class Client : MonoBehaviour
+    public class Client : MonoBehaviour, IConnectableAgent
     {
         
         PinionCore.Remote.Ghost.IAgent _Agent;

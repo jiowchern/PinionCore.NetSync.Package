@@ -4,8 +4,7 @@ using System;
 using UnityEngine;
 namespace PinionCore.NetSync.Standalone
 {
-    [RequireComponent(typeof(Client))]
-    public class Connector : MonoBehaviour 
+    public class Connector : MonoBehaviour
     {
         public Listener Listener;
 
@@ -32,10 +31,15 @@ namespace PinionCore.NetSync.Standalone
                 return;
             
             }
+            var agent = GetComponent<IConnectableAgent>();
+            if (agent == null)
+            {
+                UnityEngine.Debug.LogError($"[{nameof(Connector)}] 找不到 {nameof(IConnectableAgent)} 元件(例如 Client / GatewayClient / GatewayRegistry),無法連線。", this);
+                return;
+            }
             var steam = new PinionCore.Network.Stream();
             var reverseStream = new ReverseStream(steam);
             this.Listener.Add(reverseStream);
-            var agent = GetComponent<Client>();
             agent.Enable(steam);
             _Connecting = true;
 

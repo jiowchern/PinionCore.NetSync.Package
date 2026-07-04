@@ -9,7 +9,6 @@ using UnityEngine;
 
 namespace PinionCore.NetSync.Tcp
 {
-    [RequireComponent(typeof(Client))]
     public class TcpConnector  :MonoBehaviour
     {
         public enum ConnectResult
@@ -109,7 +108,13 @@ namespace PinionCore.NetSync.Tcp
             peer.ReceiveEvent += _Receive;
             peer.SendEvent += _Send;
 
-            var agent = GetComponent<Client>();
+            var agent = GetComponent<IConnectableAgent>();
+            if (agent == null)
+            {
+                UnityEngine.Debug.LogError($"[{nameof(TcpConnector)}] 找不到 {nameof(IConnectableAgent)} 元件(例如 Client / GatewayClient / GatewayRegistry),無法連線。", this);
+                _ToEmpry();
+                return;
+            }
             var status = new Status.TcpTransport(agent, peer, connector);
             status.OfflineEvent += () =>
             {

@@ -5,8 +5,6 @@ using System;
 using UnityEngine;
 namespace PinionCore.NetSync.Standalone
 {
-    [RequireComponent(typeof(Server))]
-
     public class Listener : MonoBehaviour , IListenable , IListenerEditor , IBindable
     {
         class Peer : IStreamable
@@ -161,18 +159,27 @@ namespace PinionCore.NetSync.Standalone
         }
 
         public void Bind()
-        {            
-            var server = GetComponent<Server>();
-            server.Listener.Add(this);
+        {
+            var host = GetComponent<IListenableHost>();
+            if (host == null)
+            {
+                UnityEngine.Debug.LogError($"[{nameof(Listener)}] 找不到 {nameof(IListenableHost)} 元件(例如 Server / GatewayRouterEndpoint),無法監聽。", this);
+                return;
+            }
+            host.Listener.Add(this);
             _Listening = true;
         }
 
         public void Close()
         {
             _Listening = false;
-            var server = GetComponent<Server>();
-            server.Listener.Remove(this);
-            
+            var host = GetComponent<IListenableHost>();
+            if (host == null)
+            {
+                return;
+            }
+            host.Listener.Remove(this);
+
         }
 
         

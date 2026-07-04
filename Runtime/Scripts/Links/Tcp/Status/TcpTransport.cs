@@ -4,13 +4,13 @@ namespace PinionCore.NetSync.Tcp.Status
 {
     class TcpTransport : IStatus
     {
-        private readonly Client _Agent;
+        private readonly IConnectableAgent _Agent;
         private readonly Peer _Peer;
-        private readonly Connector _Connector;        
+        private readonly Connector _Connector;
 
         public event System.Action OfflineEvent;
         bool _Done;
-        public TcpTransport(Client agent,Peer peer,Connector connector)
+        public TcpTransport(IConnectableAgent agent,Peer peer,Connector connector)
         {
             _Done = false;
             _Agent = agent;

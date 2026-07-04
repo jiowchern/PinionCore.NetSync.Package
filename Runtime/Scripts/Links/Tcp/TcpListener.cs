@@ -6,7 +6,6 @@ using UnityEngine;
 namespace PinionCore.NetSync.Tcp
 {
     
-    [RequireComponent(typeof(Server))]
     public class TcpListener : MonoBehaviour , IListenerEditor, IBindable
     {
         private Listener _Listener;
@@ -76,14 +75,19 @@ namespace PinionCore.NetSync.Tcp
             {
                 return;
             }
+            var host = GetComponent<IListenableHost>();
+            if (host == null)
+            {
+                UnityEngine.Debug.LogError($"[{nameof(TcpListener)}] 找不到 {nameof(IListenableHost)} 元件(例如 Server / GatewayRouterEndpoint),無法監聽。", this);
+                return;
+            }
             _Listener = new Listener();
             _IsActive = true;
             BytesReceived = 0;
-            BytesSent = 0;            
+            BytesSent = 0;
             _Listener.DataReceivedEvent += _Receive;
             _Listener.DataSentEvent += _Send;
-            var server = GetComponent<Server>();
-            server.Listener.Add(_Listener);
+            host.Listener.Add(_Listener);
             _Listener.Bind(port);
         }       
 
@@ -94,8 +98,11 @@ namespace PinionCore.NetSync.Tcp
                 return;
             }
             
-            var server = GetComponent<Server>();
-            server.Listener.Remove(_Listener);
+            var host = GetComponent<IListenableHost>();
+            if (host != null)
+            {
+                host.Listener.Remove(_Listener);
+            }
             _Listener.DataReceivedEvent -= _Receive;
             _Listener.DataSentEvent -= _Send;
             _IsActive = false;
