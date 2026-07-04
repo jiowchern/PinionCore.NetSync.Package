@@ -29,7 +29,7 @@ namespace PinionCore.NetSync
             public ISessionBinder Binder;
         }
         private readonly System.Collections.Concurrent.ConcurrentQueue<BinderCommand> _BinderOperator;
-        public UnityEngine.Events.UnityEvent<BinderCommand> BinderEvent;
+        public UnityEngine.Events.UnityEvent<BinderCommand> BinderEvent = new UnityEngine.Events.UnityEvent<BinderCommand>();
         private PinionCore.Remote.Soul.SessionEngine _Service;
 
         public static bool EnableLog = false;

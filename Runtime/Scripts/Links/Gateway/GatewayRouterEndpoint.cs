@@ -23,6 +23,12 @@ namespace PinionCore.NetSync.Gateways
 
         Linstener IListenableHost.Listener => _GetRouter().GetListener(Endpoint);
 
+        // 編輯器內加入元件(或右鍵 Reset)時,自動抓父階層的 GatewayRouter。
+        void Reset()
+        {
+            Router = GetComponentInParent<GatewayRouter>();
+        }
+
         GatewayRouter _GetRouter()
         {
             if (Router == null)

@@ -273,18 +273,39 @@ Runtime/Scripts/
 - Listener（`Tcp.TcpListener` / `Web.WebListener` / `Standalone.Listener`）可掛向任何 `IListenableHost` —— `Server` 或 `GatewayRouterEndpoint`。
 - Connector（`Tcp.TcpConnector` / `Web.WebConnector` / `Standalone.Connector`）可連向任何 `IConnectableAgent` —— `Client`、`GatewayClient` 或 `GatewayRegistry`。
 
+### 一鍵生成（建議入口）
+
+Gateway 不需要撰寫任何程式碼，直接在 **Hierarchy 視窗右鍵**一鍵生成接好線的物件：
+
+> **GameObject → PinionCore → NetSync →**
+> - **Gateway Router** —— `GatewayRouter` + Registry / Session 兩個端點子物件
+>   （各含 `GatewayRouterEndpoint` + `TcpListener` + 自動 Bind 的 Kit）
+> - **Gateway Service (Server + Registry)** —— `Server` + `GatewayRegistry` + `TcpConnector` + `SoulProvider`
+> - **Gateway Client (TCP / WebSocket / Standalone)** —— `GatewayClient` + 對應 Connector + `GhostProvider`
+>
+> 生成後只需：指派協議資產、指派 Listener / Connector 的 Config
+> （Standalone 則把 Connector 的 Listener 指向 Router Session 端點的 `Standalone.Listener`），即可運作。
+> 專案中若只有**一顆** ProtocolProvider 資產，生成時會自動指派。
+
 ### 架設 Router
+
+Router 的監聽架構與 `Server` 完全一致：`GatewayRouterEndpoint` 就是一個 `IListenableHost`，
+掛上任一傳輸層的 Listener（`Tcp.TcpListener` / `Web.WebListener` / `Standalone.Listener`）即可：
 
 1. 建立 GameObject，加入 `GatewayRouter`。
 2. 建立兩個**子物件**，各加入 `GatewayRouterEndpoint`，`Endpoint` 分別設為 **Registry** 與 **Session**
    （未指派 `Router` 欄位時會自動往父物件尋找）。
-3. 在兩個子物件上各加入一個 Listener（例如 `Tcp.TcpListener` + 各自的 Config 資產），並呼叫 `Bind()`。
+3. 在兩個子物件上各加入 Listener + Config 資產，並呼叫 `Bind()`
+   （或掛 `Kits.TcpStartToBind` 等 Kit 讓 Start 自動 Bind）。
 
 ```
 GatewayRouter (GameObject)
 ├── RegistryEndpoint：GatewayRouterEndpoint(Registry) + TcpListener(Port 20001)
-└── SessionEndpoint： GatewayRouterEndpoint(Session)  + TcpListener(Port 20002)
+└── SessionEndpoint： GatewayRouterEndpoint(Session)  + TcpListener(Port 20002) + WebListener(Port 20003,供 WebGL)
 ```
+
+同一個端點可**並掛多個 Listener**（例如 Session 同時開 TCP 與 WebSocket），
+也可全部換成 `Standalone.Listener` 做單場景測試。
 
 ### 架設遊戲服務（向 Router 註冊）
 
@@ -315,8 +336,8 @@ gatewayClient.Queryer.QueryNotifier<IPlayer>().Supply += player => { /* ... */ }
 - 協議的 `VersionCode` 是 Router 路由的隔離依據：`GatewayRegistry` 與 `GatewayClient` 必須使用**同一份協議**，
   否則互相看不見。這也讓新舊版本服務可以同時掛在同一個 Router 上逐步升級。
 - Router 本身不需要協議資產，可獨立佈署於任何 Unity 執行個體（headless 亦可）。
-- 完整流程可參考套件測試 `Tests/GatewayTests.cs`：以 Standalone 傳輸在單一場景內
-  跑通 Router → Registry 註冊 → 客戶端連線 → 跨路由 RMI。
+- 完整流程可參考套件測試 `Tests/GatewayTests.cs`：包含 Standalone 傳輸與真實 TCP 連線
+  兩種端對端測試，皆跑通 Router → Registry 註冊 → 客戶端連線 → 跨路由 RMI。
 
 ---
 

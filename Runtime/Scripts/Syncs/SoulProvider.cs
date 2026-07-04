@@ -27,7 +27,11 @@ namespace PinionCore.NetSync.Syncs.Souls
         {
             if (cmd.Status == Server.BinderCommand.OperatorStatus.Add)
             {
-                
+                if (SoulPrefab == null)
+                {
+                    UnityEngine.Debug.LogWarning($"[{nameof(SoulProvider)}] 未指派 SoulPrefab,略過此連線的 Soul 生成。", this);
+                    return;
+                }
                 var soul = GameObject.Instantiate(SoulPrefab.gameObject, transform);
                 var soulBinder = soul.GetComponent<Soul>();
                 soulBinder.Initial(cmd.Binder);

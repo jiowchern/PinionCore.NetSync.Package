@@ -20,7 +20,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 共用介面：`IConnectableAgent`（Connector 的連線目標：`Client` / `GatewayClient` / `GatewayRegistry`）、
   `IListenableHost`（Listener 的掛載宿主：`Server` / `GatewayRouterEndpoint`）、
   `IQueryerHost`（Ghost 查詢入口：`Client` / `GatewayClient`）。
-- Gateway 全流程整合測試 `Tests/GatewayTests.cs`（Standalone 傳輸：Router → Registry 註冊 → 客戶端連線 → 跨路由 RMI）。
+- Hierarchy 右鍵選單 `GameObject → PinionCore → NetSync →`：
+  一鍵生成 Gateway Router（含 Registry / Session 端點 + TcpListener + 自動 Bind Kit）/
+  Gateway Service / Gateway Client（TCP / WebSocket / Standalone）已接線物件。
+  專案中僅有一顆 ProtocolProvider 資產時自動指派。
+- `Kits.StandaloneStartToConnect`：Start 時自動呼叫 `Standalone.Connector.Connect()`。
+- Gateway 全流程整合測試 `Tests/GatewayTests.cs`：Standalone 傳輸與真實 TCP
+  兩種端對端測試（Router → Registry 註冊 → 客戶端連線 → 跨路由 RMI）。
 
 ### Changed
 - Tcp / Web / Standalone 的 Connector 與 Listener 改為透過 `IConnectableAgent` / `IListenableHost`
@@ -28,6 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `RequireComponent` 屬性。既有場景不受影響。
 - `GhostProvider` 的 `Client` 欄位未指派時，會自動改抓同物件上的 `IQueryerHost`
   （`Client` 或 `GatewayClient`）。
+- `Server.BinderEvent`、`TcpConnector.ConnectResultEvent` / `ConnectBreakEvent` 等 UnityEvent
+  欄位加上預設初始化，執行時期以 `AddComponent` 建立元件不再是 null。
 - 最低 Unity 版本需求由 `2022.2` 提升至 `6000.4`（Unity 6）。
 - `ProtocolProvider` 現在直接實作 `PinionCore.Remote.IProtocol`；抽象方法由 `Create()` 改名為 `Get()`。
   `Server` / `Client` 的 `Protocol` 直接回傳 `Provider` 本身。

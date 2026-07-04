@@ -286,18 +286,39 @@ All existing transport components are **reused as-is**:
 - Listeners (`Tcp.TcpListener` / `Web.WebListener` / `Standalone.Listener`) attach to any `IListenableHost` — a `Server` or a `GatewayRouterEndpoint`.
 - Connectors (`Tcp.TcpConnector` / `Web.WebConnector` / `Standalone.Connector`) connect any `IConnectableAgent` — a `Client`, `GatewayClient`, or `GatewayRegistry`.
 
+### One-click creation (recommended entry point)
+
+The Gateway needs no user code at all — right-click in the **Hierarchy window** to create fully wired objects:
+
+> **GameObject → PinionCore → NetSync →**
+> - **Gateway Router** — `GatewayRouter` + two endpoint children (Registry / Session), each with a
+>   `GatewayRouterEndpoint` + `TcpListener` + an auto-bind kit
+> - **Gateway Service (Server + Registry)** — `Server` + `GatewayRegistry` + `TcpConnector` + `SoulProvider`
+> - **Gateway Client (TCP / WebSocket / Standalone)** — `GatewayClient` + matching connector + `GhostProvider`
+>
+> After creation you only assign the protocol asset and the listener / connector configs
+> (for Standalone, point the connector's Listener at the `Standalone.Listener` on the Router's Session endpoint).
+> If the project contains exactly **one** ProtocolProvider asset it is assigned automatically.
+
 ### Setting up the Router
+
+The Router listens exactly the way `Server` does: a `GatewayRouterEndpoint` *is* an `IListenableHost`,
+so you attach any transport listener (`Tcp.TcpListener` / `Web.WebListener` / `Standalone.Listener`):
 
 1. Create a GameObject and add `GatewayRouter`.
 2. Create two **child objects**, each with a `GatewayRouterEndpoint`; set `Endpoint` to **Registry** and
    **Session** respectively (when the `Router` field is unassigned it is resolved from the parent).
-3. Add a listener to each child (e.g. `Tcp.TcpListener` with its own config asset) and call `Bind()`.
+3. Add a listener + config asset to each child and call `Bind()`
+   (or attach a kit such as `Kits.TcpStartToBind` to bind automatically on Start).
 
 ```
 GatewayRouter (GameObject)
 ├── RegistryEndpoint: GatewayRouterEndpoint(Registry) + TcpListener(Port 20001)
-└── SessionEndpoint:  GatewayRouterEndpoint(Session)  + TcpListener(Port 20002)
+└── SessionEndpoint:  GatewayRouterEndpoint(Session)  + TcpListener(Port 20002) + WebListener(Port 20003 for WebGL)
 ```
+
+An endpoint can host **multiple listeners at once** (e.g. Session serving both TCP and WebSocket), or use
+`Standalone.Listener` everywhere for single-scene testing.
 
 ### Setting up a game service (registering with the Router)
 
@@ -333,9 +354,9 @@ gatewayClient.Queryer.QueryNotifier<IPlayer>().Supply += player => { /* ... */ }
   must share the **same protocol asset** or they will never see each other. This also lets old and new
   service versions coexist on one Router during rolling upgrades.
 - The Router itself needs no protocol asset and can be deployed as a standalone (even headless) Unity instance.
-- For an end-to-end reference see the package test `Tests/GatewayTests.cs`: it drives
-  Router → Registry registration → client connection → cross-router RMI in a single scene over the
-  Standalone transport.
+- For end-to-end references see the package test `Tests/GatewayTests.cs`: one test assembles everything in a
+  single scene over the Standalone transport, another drives real TCP connections — both covering
+  Router → Registry registration → client connection → cross-router RMI.
 
 ---
 

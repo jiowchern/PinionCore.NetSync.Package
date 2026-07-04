@@ -28,8 +28,8 @@ namespace PinionCore.NetSync.Tcp
         [Tooltip("連線設定資產;呼叫無參數的 Connect() 時會使用此設定。")]
         public TcpConnectionConfig Config;
 
-        public UnityEngine.Events.UnityEvent<ConnectResult> ConnectResultEvent;
-        public UnityEngine.Events.UnityEvent ConnectBreakEvent;
+        public UnityEngine.Events.UnityEvent<ConnectResult> ConnectResultEvent = new UnityEngine.Events.UnityEvent<ConnectResult>();
+        public UnityEngine.Events.UnityEvent ConnectBreakEvent = new UnityEngine.Events.UnityEvent();
         [CreateProperty] public ConnectorStatus CurrentStatus { get; private set; }
         [CreateProperty] public long BytesReceived { get; private set; }
         [CreateProperty] public long BytesSent { get; private set; }

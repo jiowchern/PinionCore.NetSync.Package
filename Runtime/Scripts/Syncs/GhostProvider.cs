@@ -57,7 +57,10 @@ namespace PinionCore.NetSync.Syncs.Ghosts
 
         private void _OnGhostUnsupply(IObject obj)
         {
-            var ghost = _Ghosts[obj.Id];
+            if (!_Ghosts.TryGetValue(obj.Id, out var ghost))
+            {
+                return;
+            }
             ghost.Finial(obj, _Queryer);
             _Ghosts.Remove(obj.Id);
             GameObject.Destroy(ghost.gameObject);
@@ -65,6 +68,11 @@ namespace PinionCore.NetSync.Syncs.Ghosts
 
         private void _OnGhostSupply(IObject obj)
         {
+            if (GhostPrefab == null)
+            {
+                UnityEngine.Debug.LogWarning($"[{nameof(GhostProvider)}] 未指派 GhostPrefab,略過此物件的 Ghost 生成。", this);
+                return;
+            }
             var go = GameObject.Instantiate(GhostPrefab, transform);
             var ghost = go.GetComponent<Ghost>();
             ghost.Initial(obj, _Queryer);
