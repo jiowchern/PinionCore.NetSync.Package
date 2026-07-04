@@ -44,8 +44,6 @@ namespace PinionCore.NetSync.Editor
             var registry = go.AddComponent<GatewayRegistry>();
             registry.Provider = provider;
             go.AddComponent<PinionCore.NetSync.Tcp.TcpConnector>();
-            var soulProvider = go.AddComponent<Syncs.Souls.SoulProvider>();
-            soulProvider.Server = server;
         }
 
         [MenuItem(_MenuRoot + "Gateway Client (TCP)", false, 12)]
@@ -67,8 +65,6 @@ namespace PinionCore.NetSync.Editor
             var go = _Create("GatewayClient", command);
             var client = go.AddComponent<GatewayClient>();
             client.Provider = _FindSingleProtocolProvider();
-            // GhostProvider 的 Client 欄位留空時,會自動使用同物件上的 GatewayClient (IQueryerHost)。
-            go.AddComponent<Syncs.Ghosts.GhostProvider>();
             return go;
         }
 

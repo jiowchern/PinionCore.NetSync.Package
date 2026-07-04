@@ -33,7 +33,7 @@ compile time.
 ### 3. Focus on game logic, not networking boilerplate
 You only do three things: **(1)** define *what* to sync with an interface, **(2)** set the state on the Soul side,
 **(3)** read it on the Ghost side. Packets, serialization, and connection management are handled for you, and
-object creation/destruction is driven automatically by `SoulProvider` / `GhostProvider`.
+per-session lifecycle can be managed automatically by `UserProvider` in response to connect/disconnect events.
 
 ### 4. Swap the transport freely; the same game code runs everywhere
 | Transport | Components | Best for |
@@ -45,7 +45,7 @@ object creation/destruction is driven automatically by `SoulProvider` / `GhostPr
 Switching transport means swapping one component — not a single line of game logic changes.
 
 ### 5. Reactive object lifecycle — no manual spawn messages
-When the server creates or destroys an authoritative object, clients **instantiate or destroy** the matching Ghost
+When the server `Bind`s or `Unbind`s an authoritative object, clients **receive or lose** the matching Ghost
 automatically through `INotifier<T>`'s `Supply` / `Unsupply` events. Objects entering/leaving view, players
 joining/leaving — all event-driven.
 
@@ -81,14 +81,13 @@ Add the dependency to your Unity project's `Packages/manifest.json`:
 ```
 
 ### Step 1 — Define your protocol with an interface
-A protocol is just a C# interface that inherits `IObject`. Use `Property<T>` for state to replicate, and methods
-returning `Value<T>` for RMIs the client invokes and the server executes:
+A protocol is just a C# interface that inherits `Protocolable`. Use `Property<T>` for state to replicate, and
+methods returning `Value<T>` for RMIs the client invokes and the server executes:
 
 ```csharp
-using PinionCore.NetSync.Syncs.Protocols; // IObject
 using PinionCore.Remote;
 
-public interface IPlayer : IObject
+public interface IPlayer : Protocolable
 {
     Property<int> Hp { get; }       // state: changes replicate to clients automatically
     Value<bool> Hurt(int amount);   // RMI: client calls, server executes
@@ -96,8 +95,7 @@ public interface IPlayer : IObject
 ```
 
 > **Important**: the protocol Source Generator only scans the **assembly it lives in**. Declare your protocol
-> interfaces in **your own project assembly** — every protocol interface declared there is included automatically,
-> along with the `IObject` they inherit.
+> interfaces in **your own project assembly** — every protocol interface declared there is included automatically.
 
 ### Step 2 — Generate the protocol trio (Creator + Provider + asset)
 A protocol needs three things: a `Creator` that triggers the Source Generator, a `Provider` (`ScriptableObject`)
@@ -152,29 +150,16 @@ public class GameProtocolProvider : PinionCore.NetSync.ProtocolProvider
 
 ### Step 3 — Implement the Soul (server) and Ghost (client)
 
-**Server side**: a `MonoBehaviour` that implements `IPlayer` and registers itself as an authoritative object in
-`Start()` with `gameObject.Bind<IPlayer>(this)` (the `SoulFinder` extension):
+**Server side**: a plain C# class implementing `IPlayer` *is* the authoritative object (Soul):
 
 ```csharp
-using PinionCore.NetSync.Syncs.Protocols;
-using PinionCore.NetSync.Syncs.Souls; // SoulFinder
 using PinionCore.Remote;
-using UnityEngine;
 
-public class PlayerSoul : MonoBehaviour, IPlayer
+public class Player : IPlayer
 {
-    readonly Property<int> _Hp = new Property<int>();
+    readonly Property<int> _Hp = new Property<int>(100);
 
     Property<int> IPlayer.Hp => _Hp;
-    Property<int> IObject.Id => new Property<int>(gameObject.GetInstanceID());
-
-    ISoul _Soul;
-
-    void Start()
-    {
-        _Hp.Value = 100;
-        _Soul = gameObject.Bind<IPlayer>(this); // register the authoritative object
-    }
 
     // Runs on the server when a client invokes it (RMI)
     Value<bool> IPlayer.Hurt(int amount)
@@ -182,21 +167,53 @@ public class PlayerSoul : MonoBehaviour, IPlayer
         _Hp.Value -= amount;   // the change replicates to every client automatically
         return _Hp.Value > 0;  // implicitly wrapped into Value<bool>
     }
-
-    void OnDestroy() => gameObject.Unbind(_Soul);
 }
 ```
 
-**Client side**: derive from `GhostMonoBehaviour<IPlayer>`; the package calls you back when the proxy is supplied or
-removed, and you just read properties or call methods:
+The per-session lifecycle is handled by `Sessions.User`: `Initial(binder)` is called when a client connects —
+use `binder.Bind<T>()` there to decide which authoritative objects that session can see — and `Final(binder)` is
+called on disconnect:
 
 ```csharp
-using PinionCore.NetSync.Syncs.Ghosts; // GhostMonoBehaviour
+using PinionCore.NetSync.Sessions;
+using PinionCore.Remote;
+
+public class PlayerUser : User
+{
+    Player _Player;
+    ISoul _Soul;
+
+    public override void Initial(ISessionBinder binder)
+    {
+        _Player = new Player();
+        _Soul = binder.Bind<IPlayer>(_Player); // register; the client receives Supply immediately
+    }
+
+    public override void Final(ISessionBinder binder)
+    {
+        binder.Unbind(_Soul);                  // the client receives Unsupply
+    }
+}
+```
+
+Turn `PlayerUser` into a **User prefab**.
+
+**Client side**: query the protocol interface directly on `Client.Queryer` and subscribe to `Supply` / `Unsupply`:
+
+```csharp
 using UnityEngine;
 
-public class PlayerGhost : GhostMonoBehaviour<IPlayer>
+public class PlayerGhost : MonoBehaviour
 {
-    protected override void _OnSupply(IPlayer player)
+    public PinionCore.NetSync.Client Client;
+
+    void Start()
+    {
+        Client.Queryer.QueryNotifier<IPlayer>().Supply += _OnSupply;
+        Client.Queryer.QueryNotifier<IPlayer>().Unsupply += _OnUnsupply;
+    }
+
+    void _OnSupply(IPlayer player)
     {
         Debug.Log($"player joined with HP = {player.Hp.Value}");
 
@@ -204,12 +221,9 @@ public class PlayerGhost : GhostMonoBehaviour<IPlayer>
         result.OnValue += alive => Debug.Log($"still alive: {alive}");
     }
 
-    protected override void _OnUnsupply(IPlayer player) { }
+    void _OnUnsupply(IPlayer player) { }
 }
 ```
-
-Put `PlayerSoul` together with `Soul` on the **Soul prefab**; put `PlayerGhost` together with `Ghost` on the
-**Ghost prefab**.
 
 ### Step 4 — Set up the server scene
 On a GameObject:
@@ -218,10 +232,10 @@ On a GameObject:
 2. Add a listener (e.g. `Tcp.TcpListener`), create a `Tcp Connection Config` asset
    (Create → `PinionCore/NetSync/Tcp Connection Config`, set the Port), assign it to the listener's **Config**
    field, and call `Bind()` during initialization.
-3. Add `Syncs.Souls.SoulProvider`, point its `Server` field at the server, and assign the **Soul prefab** above.
+3. Add `Sessions.UserProvider`, point its `Server` field at the server, and assign the **User prefab** above.
 
-When a client connects, `SoulProvider` automatically instantiates one Soul prefab for that session, and destroys
-it on disconnect.
+When a client connects, `UserProvider` automatically instantiates one User prefab for that session and calls
+`Initial(binder)`; on disconnect it calls `Final(binder)` and destroys the instance.
 
 ### Step 5 — Set up the client scene
 On a GameObject:
@@ -229,17 +243,13 @@ On a GameObject:
 1. Add the `Client` component and assign the **same** `GameProtocol.asset` to its **Provider** field.
 2. Add the matching connector (e.g. `Tcp.TcpConnector`), assign a `Tcp Connection Config` (Host + Port matching the
    server) to its **Config** field, and call `Connect()` when you want to connect.
-3. Add `Syncs.Ghosts.GhostProvider`, point its `Client` field at the client, and assign the **Ghost prefab** above.
+3. Attach the `PlayerGhost` above and point its `Client` field at the client.
 
-When the server supplies an object, `GhostProvider` instantiates the Ghost prefab automatically and destroys it on
-removal.
+Once connected, objects the server `Bind`s arrive through the `Supply` event; `Unbind` triggers `Unsupply`.
 
 ### Step 6 — Run
 Start the server scene first (`Bind()`), then the client scene (`Connect()`). To verify everything in a single
 scene without opening sockets, swap the transport for `Standalone.Listener` / `Standalone.Connector`.
-
-> Prefer to grab the proxy without deriving from `GhostMonoBehaviour<T>`? Use `gameObject.Query<IPlayer>()`
-> (the `GhostFinder` extension) to get an `INotifier<IPlayer>` and subscribe to `Supply` / `Unsupply` yourself.
 
 ---
 
@@ -255,16 +265,14 @@ Runtime/Scripts/
 │   ├── Tcp/               TCP transport + TcpConnectionConfig
 │   ├── Web/               WebSocket transport + WebConnectionConfig
 │   └── Gateway/           Distributed routing gateway (GatewayRouter, GatewayRegistry, GatewayClient)
-└── Syncs/                 Soul–Ghost synchronization
-    ├── Protocols/         Protocol interfaces such as IObject
-    ├── Souls/             Server-side authoritative objects (Soul, SoulProvider)
-    └── Ghosts/            Client-side proxy objects (Ghost, GhostMonoBehaviour, GhostProvider)
+└── Sessions/              Per-session lifecycle (User, UserProvider)
 ```
 
-- **Soul**: the server-side authoritative object that runs the real game logic.
-- **Ghost**: the client-side proxy that reflects server state.
-- **SoulProvider / GhostProvider**: instantiate/destroy Soul / Ghost prefabs in response to session and object events.
-- **Extension methods**: `gameObject.Bind<T>()`, `gameObject.Unbind()`, `gameObject.Query<T>()`.
+- **Soul**: the server-side authoritative object (a plain C# object implementing a protocol interface) that runs
+  the real game logic; registered with `ISessionBinder.Bind<T>()`.
+- **Ghost**: the client-side proxy that reflects server state; obtained via `Queryer.QueryNotifier<T>()`.
+- **User / UserProvider**: instantiate/destroy a User prefab per connection, delivering the `Initial` / `Final`
+  lifecycle of each session.
 
 ---
 
@@ -293,8 +301,8 @@ The Gateway needs no user code at all — right-click in the **Hierarchy window*
 > **GameObject → PinionCore → NetSync →**
 > - **Gateway Router** — `GatewayRouter` + two endpoint children (Registry / Session), each with a
 >   `GatewayRouterEndpoint` + `TcpListener` + an auto-bind kit
-> - **Gateway Service (Server + Registry)** — `Server` + `GatewayRegistry` + `TcpConnector` + `SoulProvider`
-> - **Gateway Client (TCP / WebSocket / Standalone)** — `GatewayClient` + matching connector + `GhostProvider`
+> - **Gateway Service (Server + Registry)** — `Server` + `GatewayRegistry` + `TcpConnector`
+> - **Gateway Client (TCP / WebSocket / Standalone)** — `GatewayClient` + matching connector
 >
 > After creation you only assign the protocol asset and the listener / connector configs
 > (for Standalone, point the connector's Listener at the `Standalone.Listener` on the Router's Session endpoint).
@@ -324,7 +332,7 @@ An endpoint can host **multiple listeners at once** (e.g. Session serving both T
 
 On a single GameObject:
 
-1. `Server` — assign the protocol asset; `SoulProvider` etc. work unchanged. **No public-facing listener is
+1. `Server` — assign the protocol asset; `UserProvider` etc. work unchanged. **No public-facing listener is
    needed** — player connections arrive through the Router.
 2. `GatewayRegistry` — assign the **same** protocol asset and set the `Group`.
 3. A connector (e.g. `Tcp.TcpConnector` with a config pointing at the Router's **Registry** endpoint) — call
@@ -340,8 +348,6 @@ On a single GameObject:
 1. `GatewayClient` — assign the **same** protocol asset.
 2. A connector (e.g. `Web.WebConnector` for WebGL, config pointing at the Router's **Session** endpoint) —
    call `Connect()`.
-3. `GhostProvider` — leave its `Client` field unassigned and it automatically uses the `GatewayClient` on the
-   same GameObject.
 
 ```csharp
 // Queried exactly like Client

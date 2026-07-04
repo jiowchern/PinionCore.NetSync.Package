@@ -28,7 +28,7 @@ PinionCore NetSync 建立在 [PinionCore.Remote](https://github.com/jiowchern/Pi
 
 ### 3. 專注遊戲邏輯，不寫網路樣板
 你只需要三件事：**(1)** 用介面定義「要同步什麼」、**(2)** 在 Soul 端設定狀態、**(3)** 在 Ghost 端讀取。
-封包、序列化、連線管理全部由套件處理。物件的生成與銷毀也由 `SoulProvider` / `GhostProvider` 依事件自動完成。
+封包、序列化、連線管理全部由套件處理。連線（session）的生命週期則可交由 `UserProvider` 依上下線事件自動管理。
 
 ### 4. 傳輸層可隨意抽換，同一份遊戲程式碼通吃
 | 傳輸層 | 元件 | 適用場景 |
@@ -40,8 +40,8 @@ PinionCore NetSync 建立在 [PinionCore.Remote](https://github.com/jiowchern/Pi
 切換傳輸層只要換一個元件，遊戲邏輯一行都不用改。
 
 ### 5. 反應式物件生命週期，不需手寫 spawn 訊息
-伺服器產生／銷毀一個權威物件時，客戶端會透過 `INotifier<T>` 的 `Supply` / `Unsupply` 事件
-**自動實例化或銷毀**對應的 Ghost。物件進出視野、玩家上下線，全部事件驅動。
+伺服器 `Bind` / `Unbind` 一個權威物件時，客戶端會透過 `INotifier<T>` 的 `Supply` / `Unsupply` 事件
+**自動取得或移除**對應的 Ghost。物件進出視野、玩家上下線，全部事件驅動。
 
 ### 6. 設定即資產（ScriptableObject）
 協議（`ProtocolProvider`）與連線端點（`ConnectionConfig`）都是可共用、可序列化的 `.asset`：
@@ -74,14 +74,13 @@ PinionCore NetSync 建立在 [PinionCore.Remote](https://github.com/jiowchern/Pi
 ```
 
 ### Step 1 — 用介面定義你的協議
-協議只是一個繼承 `IObject` 的 C# 介面。用 `Property<T>` 表示要同步的狀態，
+協議只是一個繼承 `Protocolable` 的 C# 介面。用 `Property<T>` 表示要同步的狀態，
 用回傳 `Value<T>` 的方法表示客戶端可呼叫、伺服器執行的 RMI：
 
 ```csharp
-using PinionCore.NetSync.Syncs.Protocols; // IObject
 using PinionCore.Remote;
 
-public interface IPlayer : IObject
+public interface IPlayer : Protocolable
 {
     Property<int> Hp { get; }       // 狀態：數值變動自動複寫到客戶端
     Value<bool> Hurt(int amount);   // RMI：客戶端呼叫、伺服器執行
@@ -89,8 +88,7 @@ public interface IPlayer : IObject
 ```
 
 > **重點**：協議的 Source Generator 只掃描**它所在的 assembly**。
-> 請把協議介面宣告在**你自己的專案 assembly** 裡——在此宣告的每個協議介面都會被自動納入，
-> 它們所繼承的 `IObject` 也會一併納入。
+> 請把協議介面宣告在**你自己的專案 assembly** 裡——在此宣告的每個協議介面都會被自動納入。
 
 ### Step 2 — 產生協議三件套（Creator + Provider + 資產）
 協議需要三樣東西：觸發 Source Generator 的 `Creator`、把它包成可指派資產的 `Provider`（`ScriptableObject`），
@@ -142,29 +140,16 @@ public class GameProtocolProvider : PinionCore.NetSync.ProtocolProvider
 
 ### Step 3 — 實作 Soul（伺服器）與 Ghost（客戶端）
 
-**伺服器端**：一個實作 `IPlayer` 的 `MonoBehaviour`，在 `Start()` 用 `gameObject.Bind<IPlayer>(this)`
-註冊為權威物件（`SoulFinder` 擴充方法）：
+**伺服器端**：實作 `IPlayer` 的普通 C# 類別就是權威物件（Soul）：
 
 ```csharp
-using PinionCore.NetSync.Syncs.Protocols;
-using PinionCore.NetSync.Syncs.Souls; // SoulFinder
 using PinionCore.Remote;
-using UnityEngine;
 
-public class PlayerSoul : MonoBehaviour, IPlayer
+public class Player : IPlayer
 {
-    readonly Property<int> _Hp = new Property<int>();
+    readonly Property<int> _Hp = new Property<int>(100);
 
     Property<int> IPlayer.Hp => _Hp;
-    Property<int> IObject.Id => new Property<int>(gameObject.GetInstanceID());
-
-    ISoul _Soul;
-
-    void Start()
-    {
-        _Hp.Value = 100;
-        _Soul = gameObject.Bind<IPlayer>(this); // 註冊權威物件
-    }
 
     // 當客戶端呼叫時，這段在伺服器上執行 (RMI)
     Value<bool> IPlayer.Hurt(int amount)
@@ -172,21 +157,52 @@ public class PlayerSoul : MonoBehaviour, IPlayer
         _Hp.Value -= amount;   // 變動自動複寫到所有客戶端
         return _Hp.Value > 0;  // 隱含轉型為 Value<bool>
     }
-
-    void OnDestroy() => gameObject.Unbind(_Soul);
 }
 ```
 
-**客戶端**：繼承 `GhostMonoBehaviour<IPlayer>`，套件會自動在代理物件供應／移除時回呼，
-你只要讀取屬性或呼叫方法：
+連線的生命週期由 `Sessions.User` 承接：客戶端連上時 `Initial(binder)` 被呼叫，
+在這裡用 `binder.Bind<T>()` 決定要讓這條連線看見哪些權威物件；斷線時 `Final(binder)` 被呼叫：
 
 ```csharp
-using PinionCore.NetSync.Syncs.Ghosts; // GhostMonoBehaviour
+using PinionCore.NetSync.Sessions;
+using PinionCore.Remote;
+
+public class PlayerUser : User
+{
+    Player _Player;
+    ISoul _Soul;
+
+    public override void Initial(ISessionBinder binder)
+    {
+        _Player = new Player();
+        _Soul = binder.Bind<IPlayer>(_Player); // 註冊權威物件，客戶端立即收到 Supply
+    }
+
+    public override void Final(ISessionBinder binder)
+    {
+        binder.Unbind(_Soul);                  // 客戶端收到 Unsupply
+    }
+}
+```
+
+把 `PlayerUser` 做成 **User 預置物**。
+
+**客戶端**：直接向 `Client.Queryer` 查詢協議介面，訂閱 `Supply` / `Unsupply`：
+
+```csharp
 using UnityEngine;
 
-public class PlayerGhost : GhostMonoBehaviour<IPlayer>
+public class PlayerGhost : MonoBehaviour
 {
-    protected override void _OnSupply(IPlayer player)
+    public PinionCore.NetSync.Client Client;
+
+    void Start()
+    {
+        Client.Queryer.QueryNotifier<IPlayer>().Supply += _OnSupply;
+        Client.Queryer.QueryNotifier<IPlayer>().Unsupply += _OnUnsupply;
+    }
+
+    void _OnSupply(IPlayer player)
     {
         Debug.Log($"玩家加入，目前 HP = {player.Hp.Value}");
 
@@ -194,11 +210,9 @@ public class PlayerGhost : GhostMonoBehaviour<IPlayer>
         result.OnValue += alive => Debug.Log($"存活：{alive}");
     }
 
-    protected override void _OnUnsupply(IPlayer player) { }
+    void _OnUnsupply(IPlayer player) { }
 }
 ```
-
-把 `PlayerSoul` 與 `Soul` 一起放進 **Soul 預置物**；把 `PlayerGhost` 與 `Ghost` 一起放進 **Ghost 預置物**。
 
 ### Step 4 — 架設伺服器場景
 在一個 GameObject 上：
@@ -207,9 +221,10 @@ public class PlayerGhost : GhostMonoBehaviour<IPlayer>
 2. 加入一個 Listener（例如 `Tcp.TcpListener`），建立一顆 `Tcp Connection Config` 資產
    （右鍵 → Create → `PinionCore/NetSync/Tcp Connection Config`，設定 Port），指派到 Listener 的 **Config** 欄位，
    並在初始化時呼叫 `Bind()`。
-3. 加入 `Syncs.Souls.SoulProvider`，把 `Server` 指給它，並指定上面的 **Soul 預置物**。
+3. 加入 `Sessions.UserProvider`，把 `Server` 指給它，並指定上面的 **User 預置物**。
 
-當客戶端連上時，`SoulProvider` 會自動為該連線實例化一份 Soul 預置物；斷線時自動銷毀。
+當客戶端連上時，`UserProvider` 會自動為該連線實例化一份 User 預置物並呼叫 `Initial(binder)`；
+斷線時呼叫 `Final(binder)` 並銷毀。
 
 ### Step 5 — 架設客戶端場景
 在一個 GameObject 上：
@@ -217,16 +232,13 @@ public class PlayerGhost : GhostMonoBehaviour<IPlayer>
 1. 加入 `Client` 元件，把**同一顆** `GameProtocol.asset` 指派到 **Provider** 欄位。
 2. 加入對應的 Connector（例如 `Tcp.TcpConnector`），指派一顆 `Tcp Connection Config`
    （Host + Port，需與伺服器一致）到 **Config** 欄位，並在需要連線時呼叫 `Connect()`。
-3. 加入 `Syncs.Ghosts.GhostProvider`，把 `Client` 指給它，並指定上面的 **Ghost 預置物**。
+3. 把上面的 `PlayerGhost` 掛上，並把 `Client` 指給它。
 
-伺服器送來物件時，`GhostProvider` 會自動實例化 Ghost 預置物；物件移除時自動銷毀。
+連線建立後，伺服器 `Bind` 的物件會透過 `Supply` 事件送達；`Unbind` 時觸發 `Unsupply`。
 
 ### Step 6 — 執行
 先跑伺服器場景（`Bind()`），再跑客戶端場景（`Connect()`）。
 若要在單一場景內快速驗證、不開 socket，把傳輸層換成 `Standalone.Listener` / `Standalone.Connector` 即可。
-
-> 想直接取得代理物件而不繼承 `GhostMonoBehaviour<T>`？可用 `gameObject.Query<IPlayer>()`
-> （`GhostFinder` 擴充方法）拿到 `INotifier<IPlayer>`，再自行訂閱 `Supply` / `Unsupply`。
 
 ---
 
@@ -242,16 +254,12 @@ Runtime/Scripts/
 │   ├── Tcp/               TCP 傳輸 + TcpConnectionConfig
 │   ├── Web/               WebSocket 傳輸 + WebConnectionConfig
 │   └── Gateway/           分散式路由閘道 (GatewayRouter, GatewayRegistry, GatewayClient)
-└── Syncs/                 Soul–Ghost 同步系統
-    ├── Protocols/         IObject 等協議介面
-    ├── Souls/             伺服器端權威物件 (Soul, SoulProvider)
-    └── Ghosts/            客戶端代理物件 (Ghost, GhostMonoBehaviour, GhostProvider)
+└── Sessions/              連線生命週期 (User, UserProvider)
 ```
 
-- **Soul**：伺服器端權威物件，執行真正的遊戲邏輯。
-- **Ghost**：客戶端代理物件，反映伺服器狀態。
-- **SoulProvider / GhostProvider**：依連線與物件事件，自動實例化／銷毀 Soul / Ghost 預置物。
-- **擴充方法**：`gameObject.Bind<T>()`、`gameObject.Unbind()`、`gameObject.Query<T>()`。
+- **Soul**：伺服器端權威物件（實作協議介面的普通 C# 物件），執行真正的遊戲邏輯，用 `ISessionBinder.Bind<T>()` 註冊。
+- **Ghost**：客戶端代理物件，反映伺服器狀態，透過 `Queryer.QueryNotifier<T>()` 取得。
+- **User / UserProvider**：依連線事件自動實例化／銷毀 User 預置物，承接每條連線的 `Initial` / `Final` 生命週期。
 
 ---
 
@@ -280,8 +288,8 @@ Gateway 不需要撰寫任何程式碼，直接在 **Hierarchy 視窗右鍵**一
 > **GameObject → PinionCore → NetSync →**
 > - **Gateway Router** —— `GatewayRouter` + Registry / Session 兩個端點子物件
 >   （各含 `GatewayRouterEndpoint` + `TcpListener` + 自動 Bind 的 Kit）
-> - **Gateway Service (Server + Registry)** —— `Server` + `GatewayRegistry` + `TcpConnector` + `SoulProvider`
-> - **Gateway Client (TCP / WebSocket / Standalone)** —— `GatewayClient` + 對應 Connector + `GhostProvider`
+> - **Gateway Service (Server + Registry)** —— `Server` + `GatewayRegistry` + `TcpConnector`
+> - **Gateway Client (TCP / WebSocket / Standalone)** —— `GatewayClient` + 對應 Connector
 >
 > 生成後只需：指派協議資產、指派 Listener / Connector 的 Config
 > （Standalone 則把 Connector 的 Listener 指向 Router Session 端點的 `Standalone.Listener`），即可運作。
@@ -311,7 +319,7 @@ GatewayRouter (GameObject)
 
 在同一個 GameObject 上：
 
-1. `Server` —— 指派協議資產，`SoulProvider` 等照常使用。**不需要**再掛對外的 Listener，玩家連線由 Router 轉送進來。
+1. `Server` —— 指派協議資產，`UserProvider` 等照常使用。**不需要**再掛對外的 Listener，玩家連線由 Router 轉送進來。
 2. `GatewayRegistry` —— 指派**同一顆**協議資產、設定 `Group`。
 3. Connector（例如 `Tcp.TcpConnector`，Config 指向 Router 的 **Registry** 端點）—— 呼叫 `Connect()` 完成註冊。
 
@@ -324,7 +332,6 @@ GatewayRouter (GameObject)
 
 1. `GatewayClient` —— 指派**同一顆**協議資產。
 2. Connector（例如 WebGL 用 `Web.WebConnector`，Config 指向 Router 的 **Session** 端點）—— 呼叫 `Connect()`。
-3. `GhostProvider` —— 不指派 `Client` 欄位時，會自動使用同物件上的 `GatewayClient`。
 
 ```csharp
 // 與 Client 相同的查詢方式

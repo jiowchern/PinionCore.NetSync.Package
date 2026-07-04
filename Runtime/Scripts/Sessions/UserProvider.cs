@@ -1,7 +1,7 @@
 using PinionCore.Remote;
 using System.Collections.Generic;
 using UnityEngine;
-namespace PinionCore.NetSync.Syncs.Souls
+namespace PinionCore.NetSync.Sessions
 {
     public class UserProvider : MonoBehaviour
     {

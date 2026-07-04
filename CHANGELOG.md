@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+- 移除 `Syncs` 的 Soul–Ghost component 同步層：`SoulProvider`、`GhostProvider`、`SoulFinder`、
+  `GhostFinder`、`Soul`、`Ghost`、`GhostMonoBehaviour`、`Souls.Transform`、`Ghosts.Transform`、
+  `Viewport`，以及協議介面 `IObject`、`ITransform`。
+  此層試圖在 PinionCore.Remote 之上重建 Netcode 式的 per-GameObject component 同步
+  （EntityId 關聯 + prefab 配對 + per-entity notifier 過濾），與 Remote「介面即同步單位」的模型重疊且擴展性差。
+  改為直接使用 `ISessionBinder.Bind<T>()` / `Queryer.QueryNotifier<T>()`。
+- Hierarchy 選單生成 Gateway Service / Gateway Client 時不再附掛 `SoulProvider` / `GhostProvider`。
+
+### Changed
+- `User` / `UserProvider` 自 `Syncs` 移至 `Sessions` 資料夾，
+  命名空間由 `PinionCore.NetSync.Syncs.Souls` 改為 `PinionCore.NetSync.Sessions`（asset GUID 不變，場景引用不受影響）。
+- 協議介面不再需要繼承 `IObject`，直接繼承 `PinionCore.Remote.Protocolable` 即可。
+- Tcp / Web / Standalone 的 Connector 與 Listener 改為透過 `IConnectableAgent` / `IListenableHost`
+  尋找目標元件（原本寫死 `GetComponent<Client>` / `GetComponent<Server>`），並移除對應的
+  `RequireComponent` 屬性。既有場景不受影響。
+- `Server.BinderEvent`、`TcpConnector.ConnectResultEvent` / `ConnectBreakEvent` 等 UnityEvent
+  欄位加上預設初始化，執行時期以 `AddComponent` 建立元件不再是 null。
+- 最低 Unity 版本需求由 `2022.2` 提升至 `6000.4`（Unity 6）。
+- `ProtocolProvider` 現在直接實作 `PinionCore.Remote.IProtocol`；抽象方法由 `Create()` 改名為 `Get()`。
+  `Server` / `Client` 的 `Protocol` 直接回傳 `Provider` 本身。
+  既有子類需把 `override ... Create()` 改為 `override ... Get()`。
+
 ### Added
 - Protocol Provider 三件套產生精靈：`Tools / PinionCore / NetSync / Create Protocol Provider...`
   （亦可從 Project 視窗右鍵 Create 選單開啟），一鍵產生 `Creator` + `Provider` 並自動建立 `.asset`，
@@ -27,19 +50,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Kits.StandaloneStartToConnect`：Start 時自動呼叫 `Standalone.Connector.Connect()`。
 - Gateway 全流程整合測試 `Tests/GatewayTests.cs`：Standalone 傳輸與真實 TCP
   兩種端對端測試（Router → Registry 註冊 → 客戶端連線 → 跨路由 RMI）。
-
-### Changed
-- Tcp / Web / Standalone 的 Connector 與 Listener 改為透過 `IConnectableAgent` / `IListenableHost`
-  尋找目標元件（原本寫死 `GetComponent<Client>` / `GetComponent<Server>`），並移除對應的
-  `RequireComponent` 屬性。既有場景不受影響。
-- `GhostProvider` 的 `Client` 欄位未指派時，會自動改抓同物件上的 `IQueryerHost`
-  （`Client` 或 `GatewayClient`）。
-- `Server.BinderEvent`、`TcpConnector.ConnectResultEvent` / `ConnectBreakEvent` 等 UnityEvent
-  欄位加上預設初始化，執行時期以 `AddComponent` 建立元件不再是 null。
-- 最低 Unity 版本需求由 `2022.2` 提升至 `6000.4`（Unity 6）。
-- `ProtocolProvider` 現在直接實作 `PinionCore.Remote.IProtocol`；抽象方法由 `Create()` 改名為 `Get()`。
-  `Server` / `Client` 的 `Protocol` 直接回傳 `Provider` 本身。
-  既有子類需把 `override ... Create()` 改為 `override ... Get()`。
 
 ## [0.0.1] - 2024-10-26
 

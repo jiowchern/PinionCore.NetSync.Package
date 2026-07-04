@@ -1,7 +1,7 @@
 using PinionCore.Remote;
 using System;
 using UnityEngine;
-namespace PinionCore.NetSync.Syncs.Souls
+namespace PinionCore.NetSync.Sessions
 {
     public abstract class User : MonoBehaviour
     {
