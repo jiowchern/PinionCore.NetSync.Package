@@ -1,27 +1,35 @@
-﻿using PinionCore.Network;
+using PinionCore.Network;
 using PinionCore.Remote;
 using System;
+using Unity.Properties;
 using UnityEngine;
 namespace PinionCore.NetSync.Standalone
 {
     public class Connector : MonoBehaviour
     {
-        
-
+        public enum ConnectorStatus
+        {
+            Offline,
+            Online,
+        }
 
         bool _Connecting;
 
         System.Action _Disconnect;
+
+        [CreateProperty] public ConnectorStatus CurrentStatus { get; private set; }
+        [CreateProperty] public long BytesReceived { get; private set; }
+        [CreateProperty] public long BytesSent { get; private set; }
+
         public Connector()
         {
             _Disconnect = _Empty;
-
-
+            CurrentStatus = ConnectorStatus.Offline;
         }
 
         private void _Empty()
         {
-            
+
         }
 
         public void Connect(Listener listener)
@@ -29,7 +37,7 @@ namespace PinionCore.NetSync.Standalone
             if(_Connecting)
             {
                 return;
-            
+
             }
             var agent = GetComponent<IConnectableAgent>();
             if (agent == null)
@@ -40,21 +48,32 @@ namespace PinionCore.NetSync.Standalone
             var steam = new PinionCore.Network.Stream();
             var reverseStream = new ReverseStream(steam);
             listener.Add(reverseStream);
-            agent.Enable(steam);
+
+            BytesSent = 0;
+            BytesReceived = 0;
+            var metered = new MeteredStreamable(steam);
+            metered.SendEvent += _Send;
+            metered.ReceiveEvent += _Receive;
+
+            agent.Enable(metered);
             _Connecting = true;
+            CurrentStatus = ConnectorStatus.Online;
 
             _Disconnect = () =>
             {
                 agent.Disable();
                 listener.Remove(reverseStream);
+                metered.SendEvent -= _Send;
+                metered.ReceiveEvent -= _Receive;
                 _Connecting = false;
+                CurrentStatus = ConnectorStatus.Offline;
             };
 
         }
 
         public void Disconnect()
         {
-            if(!_Connecting) 
+            if(!_Connecting)
             {
                 return;
             }
@@ -67,7 +86,17 @@ namespace PinionCore.NetSync.Standalone
             return _Connecting;
         }
 
-       
+        private void _Send(int bytes)
+        {
+            BytesSent += bytes;
+        }
+
+        private void _Receive(int bytes)
+        {
+            BytesReceived += bytes;
+        }
+
+
     }
 
 }

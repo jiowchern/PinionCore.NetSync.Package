@@ -1,4 +1,5 @@
-﻿using PinionCore.Network.Tcp;
+﻿using PinionCore.Network;
+using PinionCore.Network.Tcp;
 using PinionCore.Utility;
 namespace PinionCore.NetSync.Tcp.Status
 {
@@ -6,21 +7,23 @@ namespace PinionCore.NetSync.Tcp.Status
     {
         private readonly IConnectableAgent _Agent;
         private readonly Peer _Peer;
+        private readonly IStreamable _Transport;
         private readonly Connector _Connector;
 
         public event System.Action OfflineEvent;
         bool _Done;
-        public TcpTransport(IConnectableAgent agent,Peer peer,Connector connector)
+        public TcpTransport(IConnectableAgent agent,Peer peer,IStreamable transport,Connector connector)
         {
             _Done = false;
             _Agent = agent;
             _Peer = peer;
+            _Transport = transport;
             _Connector = connector;
         }
         void IStatus.Enter()
         {
             _Peer.BreakEvent += _Break;
-            _Agent.Enable(_Peer);
+            _Agent.Enable(_Transport);
         }
 
         private void _Break()

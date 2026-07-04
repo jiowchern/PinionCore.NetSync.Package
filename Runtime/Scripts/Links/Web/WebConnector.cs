@@ -1,12 +1,19 @@
 ﻿using PinionCore.Remote.Ghost;
 using PinionCore.Utility;
 using System;
+using Unity.Properties;
 using UnityEngine;
 
 namespace PinionCore.NetSync.Web
 {
     public class WebConnector : MonoBehaviour
     {
+        public enum ConnectorStatus
+        {
+            Offline,
+            Connect,
+            Online,
+        }
 
         readonly PinionCore.Utility.StatusMachine _StatusMachine;
 
@@ -14,10 +21,15 @@ namespace PinionCore.NetSync.Web
         public WebConnectionConfig Config;
 
         public bool IsConnected { get; private set; }
+
+        [CreateProperty] public ConnectorStatus CurrentStatus { get; private set; }
+        [CreateProperty] public long BytesReceived { get; private set; }
+        [CreateProperty] public long BytesSent { get; private set; }
+
         public WebConnector()
         {
             _StatusMachine = new StatusMachine();
-        
+
         }
 
         public void Start()
@@ -62,6 +74,7 @@ namespace PinionCore.NetSync.Web
         {
             var stream = new WebSocketStream(url);
             IsConnected = false;
+            CurrentStatus = ConnectorStatus.Connect;
             var status = new Status.WebConnect(stream, url);
             status.SuccessEvent += () =>
             {
@@ -77,6 +90,7 @@ namespace PinionCore.NetSync.Web
         private void _ToEmpty()
         {
             IsConnected = false;
+            CurrentStatus = ConnectorStatus.Offline;
             _StatusMachine.Empty();
         }
 
@@ -89,14 +103,32 @@ namespace PinionCore.NetSync.Web
                 _ToEmpty();
                 return;
             }
+
+            BytesSent = 0;
+            BytesReceived = 0;
+            var metered = new MeteredStreamable(stream);
+            metered.SendEvent += _Send;
+            metered.ReceiveEvent += _Receive;
+
             IsConnected = true;
-            var status = new Status.WebTransport(stream, agent);
+            CurrentStatus = ConnectorStatus.Online;
+            var status = new Status.WebTransport(stream, metered, agent);
             status.OfflineEvent += (err) =>
             {
                 UnityEngine.Debug.Log(err);
                 _ToEmpty();
             };
             _StatusMachine.Push(status);
+        }
+
+        private void _Send(int bytes)
+        {
+            BytesSent += bytes;
+        }
+
+        private void _Receive(int bytes)
+        {
+            BytesReceived += bytes;
         }
 
         public void Disconnect()

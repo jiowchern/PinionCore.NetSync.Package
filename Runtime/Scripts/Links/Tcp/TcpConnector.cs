@@ -105,8 +105,6 @@ namespace PinionCore.NetSync.Tcp
             BytesReceived = 0;
             BytesSent = 0;
             CurrentStatus = ConnectorStatus.Online;
-            peer.ReceiveEvent += _Receive;
-            peer.SendEvent += _Send;
 
             var agent = GetComponent<IConnectableAgent>();
             if (agent == null)
@@ -115,7 +113,12 @@ namespace PinionCore.NetSync.Tcp
                 _ToEmpry();
                 return;
             }
-            var status = new Status.TcpTransport(agent, peer, connector);
+
+            var metered = new MeteredStreamable(peer);
+            metered.SendEvent += _Send;
+            metered.ReceiveEvent += _Receive;
+
+            var status = new Status.TcpTransport(agent, peer, metered, connector);
             status.OfflineEvent += () =>
             {
                 ConnectBreakEvent.Invoke();
