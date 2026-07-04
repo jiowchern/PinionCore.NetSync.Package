@@ -62,14 +62,14 @@ namespace PinionCore.NetSync.Tests
             registry.Provider = provider;
             registry.Group = 1;
             var registryConnector = serverGo.AddComponent<Standalone.Connector>();
-            registryConnector.Listener = registryEndpointListener;
+            
 
             // ── 客戶端 ──
             var clientGo = new GameObject("GatewayClient");
             var client = clientGo.AddComponent<Gateways.GatewayClient>();
             client.Provider = provider;
             var clientConnector = clientGo.AddComponent<Standalone.Connector>();
-            clientConnector.Listener = sessionEndpointListener;
+            
 
             IEchoable echo = null;
             client.Queryer.QueryNotifier<IEchoable>().Supply += e => echo = e;
@@ -77,9 +77,9 @@ namespace PinionCore.NetSync.Tests
             // 等待 Start
             yield return null;
 
-            registryConnector.Connect();
+            registryConnector.Connect(registryEndpointListener);
             yield return null;
-            clientConnector.Connect();
+            clientConnector.Connect(sessionEndpointListener);
 
             for (var i = 0; i < 600 && echo == null; ++i)
             {

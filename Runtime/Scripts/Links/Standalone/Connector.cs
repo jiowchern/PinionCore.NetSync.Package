@@ -6,7 +6,7 @@ namespace PinionCore.NetSync.Standalone
 {
     public class Connector : MonoBehaviour
     {
-        public Listener Listener;
+        
 
 
         bool _Connecting;
@@ -24,7 +24,7 @@ namespace PinionCore.NetSync.Standalone
             
         }
 
-        public void Connect()
+        public void Connect(Listener listener)
         {
             if(_Connecting)
             {
@@ -39,14 +39,14 @@ namespace PinionCore.NetSync.Standalone
             }
             var steam = new PinionCore.Network.Stream();
             var reverseStream = new ReverseStream(steam);
-            this.Listener.Add(reverseStream);
+            listener.Add(reverseStream);
             agent.Enable(steam);
             _Connecting = true;
 
             _Disconnect = () =>
             {
                 agent.Disable();
-                this.Listener.Remove(reverseStream);
+                listener.Remove(reverseStream);
                 _Connecting = false;
             };
 

@@ -9,19 +9,11 @@ namespace PinionCore.NetSync.Kits
     public class StandaloneStartToConnect : MonoBehaviour
     {
         public Standalone.Connector Connector;
+        public Standalone.Listener Listener;
 
         void Start()
-        {
-            if (Connector == null)
-            {
-                Connector = GetComponent<Standalone.Connector>();
-            }
-            if (Connector == null)
-            {
-                UnityEngine.Debug.LogError($"[{nameof(StandaloneStartToConnect)}] 找不到 Standalone.Connector,無法自動連線。", this);
-                return;
-            }
-            Connector.Connect();
+        {            
+            Connector.Connect(Listener);
         }
     }
 }
