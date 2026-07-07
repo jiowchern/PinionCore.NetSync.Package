@@ -8,6 +8,11 @@ namespace PinionCore.NetSync.Web
 {
     public class WebConnector : MonoBehaviour
     {
+        public enum ConnectResult
+        {
+            ConnectSuccess,
+            ConnectFaild,
+        }
         public enum ConnectorStatus
         {
             Offline,
@@ -19,6 +24,9 @@ namespace PinionCore.NetSync.Web
 
         [Tooltip("連線設定資產;呼叫無參數的 Connect() 時會使用其中的 Url。")]
         public WebConnectionConfig Config;
+
+        public UnityEngine.Events.UnityEvent<ConnectResult> ConnectResultEvent = new UnityEngine.Events.UnityEvent<ConnectResult>();
+        public UnityEngine.Events.UnityEvent ConnectBreakEvent = new UnityEngine.Events.UnityEvent();
 
         public bool IsConnected { get; private set; }
 
@@ -79,10 +87,12 @@ namespace PinionCore.NetSync.Web
             status.SuccessEvent += () =>
             {
                 _ToTransport(stream);
+                ConnectResultEvent.Invoke(ConnectResult.ConnectSuccess);
             };
             status.FailEvent += (err) =>
             {
                 _ToEmpty();
+                ConnectResultEvent.Invoke(ConnectResult.ConnectFaild);
             };
             _StatusMachine.Push(status);
         }
@@ -116,6 +126,7 @@ namespace PinionCore.NetSync.Web
             status.OfflineEvent += (err) =>
             {
                 UnityEngine.Debug.Log(err);
+                ConnectBreakEvent.Invoke();
                 _ToEmpty();
             };
             _StatusMachine.Push(status);
