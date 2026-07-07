@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 
 using UnityEngine;
 
@@ -35,6 +36,12 @@ namespace PinionCore.NetSync.Consoles
         Vector2 _ScrollView;
         bool _LogHooked;
 
+        // 名稱允許重複,對應 Command 允許同名多次註冊;unregister 只移除一筆。
+        readonly List<string> _CommandNames;
+        List<string> _CompletionMatches;
+        int _CompletionIndex;
+        string _CompletionApplied;
+
         PinionCore.Utility.Console _Console;
         event PinionCore.Utility.Console.OnOutput _OutputEvent;
 
@@ -45,6 +52,7 @@ namespace PinionCore.NetSync.Consoles
             _LastMessage = "";
             _Input = "";
             _ScrollView = Vector2.zero;
+            _CommandNames = new List<string>();
         }
 
         public PinionCore.Utility.Command Command => _QueryConsole().Command;
@@ -54,9 +62,24 @@ namespace PinionCore.NetSync.Consoles
             if (_Console == null)
             {
                 _Console = new PinionCore.Utility.Console(this, this);
+                _Console.Command.RegisterEvent += _OnCommandRegister;
+                _Console.Command.UnregisterEvent += _OnCommandUnregister;
+
+                // help 在 Console 建構子內、訂閱之前就註冊了,事件收不到,手動補進。
+                _CommandNames.Add("help");
             }
 
             return _Console;
+        }
+
+        void _OnCommandRegister(string command, PinionCore.Utility.Command.CommandParameter ret, PinionCore.Utility.Command.CommandParameter[] args)
+        {
+            _CommandNames.Add(command);
+        }
+
+        void _OnCommandUnregister(string command)
+        {
+            _CommandNames.Remove(command);
         }
 
         void Awake()
@@ -94,11 +117,27 @@ namespace PinionCore.NetSync.Consoles
 
         void _WindowHandler(int id)
         {
+            var inputControlName = "ConsoleInput" + WindowId;
+
             var submitByKey = false;
             Event current = Event.current;
             if (current != null && current.type == EventType.KeyDown && current.keyCode == KeyCode.Return)
             {
                 submitByKey = true;
+            }
+
+            // Tab 一次會送兩個 KeyDown(keyCode=Tab 與 character='\t'),都要吃掉以免 IMGUI 換焦點,
+            // 完成邏輯只在 keyCode=Tab 那個事件觸發一次。
+            if (current != null && current.type == EventType.KeyDown &&
+                (current.keyCode == KeyCode.Tab || current.character == '\t') &&
+                GUI.GetNameOfFocusedControl() == inputControlName)
+            {
+                if (current.keyCode == KeyCode.Tab)
+                {
+                    _CycleCompletion(current.shift);
+                }
+
+                current.Use();
             }
 
             GUILayout.BeginVertical();
@@ -123,16 +162,72 @@ namespace PinionCore.NetSync.Consoles
             GUILayout.EndVertical();
 
             GUILayout.BeginHorizontal();
+            GUI.SetNextControlName(inputControlName);
             _Input = GUILayout.TextField(_Input);
             var submitByButton = GUILayout.Button("Send", GUILayout.Width(60));
             GUILayout.EndHorizontal();
+
+            // 使用者手動編輯過就重新計算候選。
+            if (_CompletionMatches != null && _Input != _CompletionApplied)
+            {
+                _ResetCompletion();
+            }
 
             if ((submitByButton || submitByKey) && _Input != string.Empty)
             {
                 var line = _Input;
                 _Input = "";
+                _ResetCompletion();
                 Submit(line);
             }
+        }
+
+        void _CycleCompletion(bool reverse)
+        {
+            if (_CompletionMatches == null)
+            {
+                // 只補第一個 token(指令名),已輸入參數時不動作。
+                if (_Input.IndexOf(' ') >= 0)
+                {
+                    return;
+                }
+
+                var matches = _CommandNames
+                    .Distinct()
+                    .Where(name => name.StartsWith(_Input, System.StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(name => name, System.StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+                if (matches.Count == 0)
+                {
+                    return;
+                }
+
+                _CompletionMatches = matches;
+                _CompletionIndex = reverse ? matches.Count - 1 : 0;
+            }
+            else
+            {
+                var count = _CompletionMatches.Count;
+                _CompletionIndex = (_CompletionIndex + (reverse ? count - 1 : 1)) % count;
+            }
+
+            _Input = _CompletionMatches[_CompletionIndex];
+            _CompletionApplied = _Input;
+
+            // 聚焦中的 TextField 以內部 TextEditor 狀態顯示,直接改 _Input 畫面不會更新,需同步。
+            if (GUIUtility.GetStateObject(typeof(TextEditor), GUIUtility.keyboardControl) is TextEditor editor)
+            {
+                editor.text = _Input;
+                editor.cursorIndex = _Input.Length;
+                editor.selectIndex = _Input.Length;
+            }
+        }
+
+        void _ResetCompletion()
+        {
+            _CompletionMatches = null;
+            _CompletionIndex = 0;
+            _CompletionApplied = null;
         }
 
         /// <summary>
