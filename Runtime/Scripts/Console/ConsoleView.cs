@@ -31,6 +31,8 @@ namespace PinionCore.NetSync.Consoles
 
         readonly Queue<string> _Messages;
         readonly object _MessagesLock;
+        // Layout pass 的訊息快照;Repaint 沿用同一份,兩個 pass 的控件數才會一致
+        string[] _RenderLines;
         string _LastMessage;
         string _Input;
         Vector2 _ScrollView;
@@ -49,6 +51,7 @@ namespace PinionCore.NetSync.Consoles
         {
             _Messages = new Queue<string>();
             _MessagesLock = new object();
+            _RenderLines = System.Array.Empty<string>();
             _LastMessage = "";
             _Input = "";
             _ScrollView = Vector2.zero;
@@ -144,17 +147,28 @@ namespace PinionCore.NetSync.Consoles
 
             _ScrollView = GUILayout.BeginScrollView(_ScrollView, GUILayout.Width(Screen.width / 2), GUILayout.Height(Screen.height * 0.9f));
 
-            lock (_MessagesLock)
+            // _Messages 可能被其他執行緒(log/網路事件)寫入;IMGUI 的 Layout 與 Repaint
+            // 兩個 pass 之間若行數改變會拋 "Getting control ..." 例外,
+            // 因此只在 Layout 時快照,其餘 pass 沿用同一份。
+            if (current != null && current.type == EventType.Layout)
             {
-                foreach (var message in _Messages)
+                lock (_MessagesLock)
                 {
-                    GUILayout.Label(message);
-                }
+                    var count = _Messages.Count + (_LastMessage.Length > 0 ? 1 : 0);
+                    var lines = new string[count];
+                    _Messages.CopyTo(lines, 0);
+                    if (_LastMessage.Length > 0)
+                    {
+                        lines[count - 1] = _LastMessage;
+                    }
 
-                if (_LastMessage.Length > 0)
-                {
-                    GUILayout.Label(_LastMessage);
+                    _RenderLines = lines;
                 }
+            }
+
+            foreach (var message in _RenderLines)
+            {
+                GUILayout.Label(message);
             }
 
             GUILayout.EndScrollView();
