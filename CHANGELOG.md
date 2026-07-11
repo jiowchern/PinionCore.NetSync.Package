@@ -17,6 +17,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hierarchy 選單生成 Gateway Service / Gateway Client 時不再附掛 `SoulProvider` / `GhostProvider`。
 
 ### Changed
+- 更新 `Runtime/Plugins` 內的 PinionCore DLL（2026-07-11 版）：序列化 wire format 壓縮改版
+  （欄位 bitmask 取代 count+index、sealed/struct 宣告型別省略 runtime type-id、稠密陣列省略元素 index、
+  `char[]` 移除多餘長度前綴），`PackageCallMethod` 類小訊息約縮 40%。
+  **Breaking**：新舊版 DLL 的 wire format 不相容，伺服器與客戶端必須同時更新。
+  另外，協議型別不需繼承時建議標 `sealed`，可獲得與 struct 相同的編碼密度。
 - `User` / `UserProvider` 自 `Syncs` 移至 `Sessions` 資料夾，
   命名空間由 `PinionCore.NetSync.Syncs.Souls` 改為 `PinionCore.NetSync.Sessions`（asset GUID 不變，場景引用不受影響）。
 - 協議介面不再需要繼承 `IObject`，直接繼承 `PinionCore.Remote.Protocolable` 即可。
