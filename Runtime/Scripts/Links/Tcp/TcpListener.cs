@@ -13,47 +13,22 @@ namespace PinionCore.NetSync.Tcp
         [Tooltip("連線設定資產;呼叫無參數的 Bind() 時會使用其中的 Port。")]
         public TcpConnectionConfig Config;
 
-        [CreateProperty] public long BytesReceived { get; private set; }
+        long _BytesReceived;
+        long _BytesSent;
 
-        
-        [CreateProperty] public long BytesSent { get; private set; }
+        [CreateProperty] public long BytesReceived => System.Threading.Interlocked.Read(ref _BytesReceived);
 
-      
+
+        [CreateProperty] public long BytesSent => System.Threading.Interlocked.Read(ref _BytesSent);
+
+
         [CreateProperty] public bool CurrentStatus { get; private set; }
 
         bool _IsActive;
         bool IListenerEditor.IsActive => _IsActive;
 
         public TcpListener()
-        {            
-        }
-
-        event Action<int> _DataReceivedEvent;
-        event Action<int> IListenerEditor.DataReceivedEvent
         {
-            add
-            {
-                _DataReceivedEvent += value;
-            }
-
-            remove
-            {
-                _DataReceivedEvent -= value;
-            }
-        }
-
-        event Action<int> _DataSendEvent;
-        event Action<int> IListenerEditor.DataSendEvent
-        {
-            add
-            {
-                _DataSendEvent +=value;
-            }
-
-            remove
-            {
-                _DataSendEvent -= value;
-            }
         }
 
         /// <summary>
@@ -83,8 +58,8 @@ namespace PinionCore.NetSync.Tcp
             }
             _Listener = new Listener();
             _IsActive = true;
-            BytesReceived = 0;
-            BytesSent = 0;
+            System.Threading.Interlocked.Exchange(ref _BytesReceived, 0);
+            System.Threading.Interlocked.Exchange(ref _BytesSent, 0);
             _Listener.DataReceivedEvent += _Receive;
             _Listener.DataSentEvent += _Send;
             host.Listener.Add(_Listener);
@@ -111,12 +86,12 @@ namespace PinionCore.NetSync.Tcp
         }
         void _Receive(int receive)
         {
-            _DataReceivedEvent?.Invoke(receive);
+            System.Threading.Interlocked.Add(ref _BytesReceived, receive);
         }
 
         void _Send(int send)
         {
-            _DataSendEvent?.Invoke(send);
+            System.Threading.Interlocked.Add(ref _BytesSent, send);
         }
         
     }

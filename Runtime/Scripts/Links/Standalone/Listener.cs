@@ -2,6 +2,7 @@ using PinionCore.Network;
 using PinionCore.Remote;
 using PinionCore.Remote.Soul;
 using System;
+using Unity.Properties;
 using UnityEngine;
 namespace PinionCore.NetSync.Standalone
 {
@@ -55,20 +56,19 @@ namespace PinionCore.NetSync.Standalone
         bool _Listening;
 
         bool IListenerEditor.IsActive => _Listening;
+
+        long _BytesReceived;
+        long _BytesSent;
+
+        [CreateProperty] public long BytesReceived => System.Threading.Interlocked.Read(ref _BytesReceived);
+        [CreateProperty] public long BytesSent => System.Threading.Interlocked.Read(ref _BytesSent);
+
         readonly System.Collections.Generic.Dictionary<IStreamable, Peer> _Peers ;
         public Listener()
         {
-            
+
             _Notice = new PinionCore.Remote.Depot<IStreamable>();
             _Peers= new System.Collections.Generic.Dictionary<IStreamable, Peer>();
-            _DataReceivedEvent += _Empty;
-            _DataSendEvent += _Empty;
-
-        }
-
-        private void _Empty(int obj)
-        {
-            
         }
 
         public void Add(IStreamable streamable)
@@ -82,12 +82,12 @@ namespace PinionCore.NetSync.Standalone
 
         private void _Receive(int obj)
         {
-            _DataReceivedEvent(obj);
+            System.Threading.Interlocked.Add(ref _BytesReceived, obj);
         }
 
         private void _Send(int obj)
         {
-            _DataSendEvent(obj);
+            System.Threading.Interlocked.Add(ref _BytesSent, obj);
         }
 
         public void Remove(IStreamable streamable)
@@ -130,34 +130,6 @@ namespace PinionCore.NetSync.Standalone
             }
         }
 
-        event Action<int> _DataReceivedEvent;
-        event Action<int> IListenerEditor.DataReceivedEvent
-        {
-            add
-            {
-                _DataReceivedEvent += value;
-            }
-
-            remove
-            {
-                _DataReceivedEvent -= value;
-            }
-        }
-
-        event Action<int> _DataSendEvent;
-        event Action<int> IListenerEditor.DataSendEvent
-        {
-            add
-            {
-                _DataSendEvent += value;
-            }
-
-            remove
-            {
-                _DataSendEvent -= value;
-            }
-        }
-
         public void Bind()
         {
             var host = GetComponent<IListenableHost>();
@@ -166,6 +138,8 @@ namespace PinionCore.NetSync.Standalone
                 UnityEngine.Debug.LogError($"[{nameof(Listener)}] 找不到 {nameof(IListenableHost)} 元件(例如 Server / GatewayRouterEndpoint),無法監聽。", this);
                 return;
             }
+            System.Threading.Interlocked.Exchange(ref _BytesReceived, 0);
+            System.Threading.Interlocked.Exchange(ref _BytesSent, 0);
             host.Listener.Add(this);
             _Listening = true;
         }

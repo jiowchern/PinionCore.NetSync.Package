@@ -10,36 +10,22 @@ namespace PinionCore.NetSync.Editor
     public class ListenerEditor<T> : UnityEditor.Editor where T : class, IListenerEditor
     {
         private IListenerEditor _Target;
-        public int _DataReceiveds;
-        public int _DataSends;
 
-        [CreateProperty]public bool IsActive => _Target.IsActive;
+        [CreateProperty] public bool IsActive => _Target.IsActive;
+        // 累計值由 runtime 元件持有,Inspector 重新選取(Editor 重建)時不會歸零。
+        [CreateProperty] public long BytesSent => _Target.BytesSent;
+        [CreateProperty] public long BytesReceived => _Target.BytesReceived;
+
         public void OnEnable()
         {
             _Target = target as T;
-            _Target.DataSendEvent += _OnDataSendEvent;
-            _Target.DataReceivedEvent += _OnDataReceivedEvent;
-
-
-        }
-
-        private void _OnDataReceivedEvent(int data)
-        {
-            System.Threading.Interlocked.Add(ref _DataReceiveds, data);
-        }
-
-        private void _OnDataSendEvent(int data)
-        {
-            System.Threading.Interlocked.Add(ref _DataSends, data);            
         }
 
         public void OnDisable()
         {
-            _Target.DataSendEvent -= _OnDataSendEvent;
-            _Target.DataReceivedEvent -= _OnDataReceivedEvent;
             _Target = null;
         }
-        
+
 
         public override VisualElement CreateInspectorGUI()
         {
@@ -53,10 +39,10 @@ namespace PinionCore.NetSync.Editor
             status.SetTextBinding(this, nameof(this.IsActive), BindingMode.ToTarget);
 
             var send = element.Q<Label>("Send");
-            send.SetTextBinding(this, nameof(_DataSends), BindingMode.ToTarget);
+            send.SetTextBinding(this, nameof(this.BytesSent), BindingMode.ToTarget);
 
             var receive = element.Q<Label>("Receive");
-            receive.SetTextBinding(this, nameof(_DataReceiveds), BindingMode.ToTarget);
+            receive.SetTextBinding(this, nameof(this.BytesReceived), BindingMode.ToTarget);
 
             // Config 欄位:僅在目標具有序列化的 Config 欄位時顯示 (TCP/Web)。
             // Standalone 監聽器沒有 Config,故移除該 PropertyField。

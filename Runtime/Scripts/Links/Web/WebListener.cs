@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Threading;
 using UnityEngine;
 using System;
+using Unity.Properties;
 
 namespace PinionCore.NetSync.Web
 {
@@ -21,7 +22,13 @@ namespace PinionCore.NetSync.Web
 
         bool IListenerEditor.IsActive => IsListening;
 
-        System.Action _Disconnect;  
+        long _BytesReceived;
+        long _BytesSent;
+
+        [CreateProperty] public long BytesReceived => System.Threading.Interlocked.Read(ref _BytesReceived);
+        [CreateProperty] public long BytesSent => System.Threading.Interlocked.Read(ref _BytesSent);
+
+        System.Action _Disconnect;
 
         public WebListener()
         {
@@ -30,35 +37,7 @@ namespace PinionCore.NetSync.Web
 
         private void _Empty()
         {
-            
-        }
 
-        event Action<int> _DataReceivedEvent;
-        event Action<int> IListenerEditor.DataReceivedEvent
-        {
-            add
-            {
-                _DataReceivedEvent += value;
-            }
-
-            remove
-            {
-                _DataReceivedEvent -= value;
-            }
-        }
-
-        event Action<int> _DataSendEvent;
-        event Action<int> IListenerEditor.DataSendEvent
-        {
-            add
-            {
-                _DataSendEvent += value;
-            }
-
-            remove
-            {
-                _DataSendEvent -= value;
-            }
         }
 
         /// <summary>
@@ -94,6 +73,8 @@ namespace PinionCore.NetSync.Web
                 return;
             }
             var listener = new Listener();
+            System.Threading.Interlocked.Exchange(ref _BytesReceived, 0);
+            System.Threading.Interlocked.Exchange(ref _BytesSent, 0);
             host.Listener.Add(listener);
             listener.Tcp.Bind(port,5);
 
@@ -124,12 +105,12 @@ namespace PinionCore.NetSync.Web
 
         private void _Send(int bytes)
         {
-            _DataSendEvent?.Invoke(bytes);
+            System.Threading.Interlocked.Add(ref _BytesSent, bytes);
         }
 
         private void _Receive(int bytes)
         {
-            _DataReceivedEvent?.Invoke(bytes);
+            System.Threading.Interlocked.Add(ref _BytesReceived, bytes);
         }
     }
 }
