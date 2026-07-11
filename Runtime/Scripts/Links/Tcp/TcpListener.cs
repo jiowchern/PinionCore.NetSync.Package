@@ -21,6 +21,11 @@ namespace PinionCore.NetSync.Tcp
 
         [CreateProperty] public long BytesSent => System.Threading.Interlocked.Read(ref _BytesSent);
 
+        [CreateProperty] public string SendDisplay => $"{BytesSent} ({_SendRate.BytesPerSecond:0.#})";
+        [CreateProperty] public string ReceiveDisplay => $"{BytesReceived} ({_ReceiveRate.BytesPerSecond:0.#})";
+
+        readonly TransferRateMeter _SendRate = new TransferRateMeter();
+        readonly TransferRateMeter _ReceiveRate = new TransferRateMeter();
 
         [CreateProperty] public bool CurrentStatus { get; private set; }
 
@@ -29,6 +34,12 @@ namespace PinionCore.NetSync.Tcp
 
         public TcpListener()
         {
+        }
+
+        public void Update()
+        {
+            _SendRate.Update(BytesSent, UnityEngine.Time.realtimeSinceStartup);
+            _ReceiveRate.Update(BytesReceived, UnityEngine.Time.realtimeSinceStartup);
         }
 
         /// <summary>
@@ -60,6 +71,8 @@ namespace PinionCore.NetSync.Tcp
             _IsActive = true;
             System.Threading.Interlocked.Exchange(ref _BytesReceived, 0);
             System.Threading.Interlocked.Exchange(ref _BytesSent, 0);
+            _SendRate.Reset(UnityEngine.Time.realtimeSinceStartup);
+            _ReceiveRate.Reset(UnityEngine.Time.realtimeSinceStartup);
             _Listener.DataReceivedEvent += _Receive;
             _Listener.DataSentEvent += _Send;
             host.Listener.Add(_Listener);

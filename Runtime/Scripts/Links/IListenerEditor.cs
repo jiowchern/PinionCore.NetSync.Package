@@ -7,5 +7,7 @@ namespace PinionCore.NetSync
         [CreateProperty] bool IsActive { get; }
         [CreateProperty] long BytesReceived { get; }
         [CreateProperty] long BytesSent { get; }
+        [CreateProperty] string SendDisplay { get; }
+        [CreateProperty] string ReceiveDisplay { get; }
     }
 }

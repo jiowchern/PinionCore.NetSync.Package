@@ -63,12 +63,24 @@ namespace PinionCore.NetSync.Standalone
         [CreateProperty] public long BytesReceived => System.Threading.Interlocked.Read(ref _BytesReceived);
         [CreateProperty] public long BytesSent => System.Threading.Interlocked.Read(ref _BytesSent);
 
+        [CreateProperty] public string SendDisplay => $"{BytesSent} ({_SendRate.BytesPerSecond:0.#})";
+        [CreateProperty] public string ReceiveDisplay => $"{BytesReceived} ({_ReceiveRate.BytesPerSecond:0.#})";
+
+        readonly TransferRateMeter _SendRate = new TransferRateMeter();
+        readonly TransferRateMeter _ReceiveRate = new TransferRateMeter();
+
         readonly System.Collections.Generic.Dictionary<IStreamable, Peer> _Peers ;
         public Listener()
         {
 
             _Notice = new PinionCore.Remote.Depot<IStreamable>();
             _Peers= new System.Collections.Generic.Dictionary<IStreamable, Peer>();
+        }
+
+        public void Update()
+        {
+            _SendRate.Update(BytesSent, UnityEngine.Time.realtimeSinceStartup);
+            _ReceiveRate.Update(BytesReceived, UnityEngine.Time.realtimeSinceStartup);
         }
 
         public void Add(IStreamable streamable)
@@ -140,6 +152,8 @@ namespace PinionCore.NetSync.Standalone
             }
             System.Threading.Interlocked.Exchange(ref _BytesReceived, 0);
             System.Threading.Interlocked.Exchange(ref _BytesSent, 0);
+            _SendRate.Reset(UnityEngine.Time.realtimeSinceStartup);
+            _ReceiveRate.Reset(UnityEngine.Time.realtimeSinceStartup);
             host.Listener.Add(this);
             _Listening = true;
         }
