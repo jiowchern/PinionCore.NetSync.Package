@@ -88,7 +88,7 @@ namespace PinionCore.NetSync.Tests
             Assert.NotNull(echo, "客戶端未能透過 Gateway 取得 IEchoable 服務");
 
             int? result = null;
-            echo.Echo(42).OnValue += v => result = v;
+            echo.Echo(42).OnValue += (v, error) => result = v;
             for (var i = 0; i < 600 && !result.HasValue; ++i)
             {
                 yield return null;
@@ -174,7 +174,7 @@ namespace PinionCore.NetSync.Tests
             Assert.NotNull(echo, "客戶端未能透過 Gateway(TCP)取得 IEchoable 服務");
 
             int? result = null;
-            echo.Echo(7).OnValue += v => result = v;
+            echo.Echo(7).OnValue += (v, error) => result = v;
             for (var i = 0; i < 600 && !result.HasValue; ++i)
             {
                 yield return null;
