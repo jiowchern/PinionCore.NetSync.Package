@@ -29,10 +29,10 @@ namespace PinionCore.NetSync.Editor.Web
             status.SetTextBinding(_Target, nameof(_Target.CurrentStatus), BindingMode.ToTarget);
 
             var send = element.Q<Label>("Send");
-            send.SetTextBinding(_Target, nameof(_Target.BytesSent), BindingMode.ToTarget);
+            send.SetTextBinding(_Target, nameof(_Target.SendDisplay), BindingMode.ToTarget);
 
             var receive = element.Q<Label>("Receive");
-            receive.SetTextBinding(_Target, nameof(_Target.BytesReceived), BindingMode.ToTarget);
+            receive.SetTextBinding(_Target, nameof(_Target.ReceiveDisplay), BindingMode.ToTarget);
 
             // 綁定序列化欄位 (Config) 至 uxml 中的 PropertyField。
             element.Bind(serializedObject);

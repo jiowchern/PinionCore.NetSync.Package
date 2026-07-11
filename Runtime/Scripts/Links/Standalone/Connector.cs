@@ -20,6 +20,11 @@ namespace PinionCore.NetSync.Standalone
         [CreateProperty] public ConnectorStatus CurrentStatus { get; private set; }
         [CreateProperty] public long BytesReceived { get; private set; }
         [CreateProperty] public long BytesSent { get; private set; }
+        [CreateProperty] public string SendDisplay => $"{BytesSent} ({_SendRate.BytesPerSecond:0.#})";
+        [CreateProperty] public string ReceiveDisplay => $"{BytesReceived} ({_ReceiveRate.BytesPerSecond:0.#})";
+
+        readonly TransferRateMeter _SendRate = new TransferRateMeter();
+        readonly TransferRateMeter _ReceiveRate = new TransferRateMeter();
 
         public Connector()
         {
@@ -51,6 +56,8 @@ namespace PinionCore.NetSync.Standalone
 
             BytesSent = 0;
             BytesReceived = 0;
+            _SendRate.Reset(UnityEngine.Time.realtimeSinceStartup);
+            _ReceiveRate.Reset(UnityEngine.Time.realtimeSinceStartup);
             var metered = new MeteredStreamable(steam);
             metered.SendEvent += _Send;
             metered.ReceiveEvent += _Receive;
@@ -69,6 +76,12 @@ namespace PinionCore.NetSync.Standalone
                 CurrentStatus = ConnectorStatus.Offline;
             };
 
+        }
+
+        public void Update()
+        {
+            _SendRate.Update(BytesSent, UnityEngine.Time.realtimeSinceStartup);
+            _ReceiveRate.Update(BytesReceived, UnityEngine.Time.realtimeSinceStartup);
         }
 
         public void Disconnect()

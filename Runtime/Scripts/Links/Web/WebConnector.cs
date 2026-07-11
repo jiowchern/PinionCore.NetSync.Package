@@ -33,6 +33,11 @@ namespace PinionCore.NetSync.Web
         [CreateProperty] public ConnectorStatus CurrentStatus { get; private set; }
         [CreateProperty] public long BytesReceived { get; private set; }
         [CreateProperty] public long BytesSent { get; private set; }
+        [CreateProperty] public string SendDisplay => $"{BytesSent} ({_SendRate.BytesPerSecond:0.#})";
+        [CreateProperty] public string ReceiveDisplay => $"{BytesReceived} ({_ReceiveRate.BytesPerSecond:0.#})";
+
+        readonly TransferRateMeter _SendRate = new TransferRateMeter();
+        readonly TransferRateMeter _ReceiveRate = new TransferRateMeter();
 
         public WebConnector()
         {
@@ -47,6 +52,8 @@ namespace PinionCore.NetSync.Web
         public void Update()
         {
             _StatusMachine.Update();
+            _SendRate.Update(BytesSent, UnityEngine.Time.realtimeSinceStartup);
+            _ReceiveRate.Update(BytesReceived, UnityEngine.Time.realtimeSinceStartup);
         }
 
         public void OnDestroy()
@@ -116,6 +123,8 @@ namespace PinionCore.NetSync.Web
 
             BytesSent = 0;
             BytesReceived = 0;
+            _SendRate.Reset(UnityEngine.Time.realtimeSinceStartup);
+            _ReceiveRate.Reset(UnityEngine.Time.realtimeSinceStartup);
             var metered = new MeteredStreamable(stream);
             metered.SendEvent += _Send;
             metered.ReceiveEvent += _Receive;

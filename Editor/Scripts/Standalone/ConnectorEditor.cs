@@ -28,10 +28,10 @@ namespace PinionCore.NetSync.Editor.Standalone
             status.SetTextBinding(_Target, nameof(_Target.CurrentStatus), BindingMode.ToTarget);
 
             var send = element.Q<Label>("Send");
-            send.SetTextBinding(_Target, nameof(_Target.BytesSent), BindingMode.ToTarget);
+            send.SetTextBinding(_Target, nameof(_Target.SendDisplay), BindingMode.ToTarget);
 
             var receive = element.Q<Label>("Receive");
-            receive.SetTextBinding(_Target, nameof(_Target.BytesReceived), BindingMode.ToTarget);
+            receive.SetTextBinding(_Target, nameof(_Target.ReceiveDisplay), BindingMode.ToTarget);
 
             return element;
         }
