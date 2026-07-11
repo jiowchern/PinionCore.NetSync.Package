@@ -14,5 +14,10 @@ namespace PinionCore.NetSync.Kits
             Listener.Bind();
 
         }
+
+        void OnDestroy()
+        {
+            Listener.Close();
+        }
     }
 }

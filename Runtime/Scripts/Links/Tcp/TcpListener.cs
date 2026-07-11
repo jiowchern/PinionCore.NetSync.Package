@@ -76,8 +76,13 @@ namespace PinionCore.NetSync.Tcp
             _Listener.DataReceivedEvent += _Receive;
             _Listener.DataSentEvent += _Send;
             host.Listener.Add(_Listener);
-            _Listener.Bind(port);
-        }       
+            var bindError = _Listener.Bind(port);
+            if (bindError != null)
+            {
+                Close();
+                UnityEngine.Debug.LogError($"[{nameof(TcpListener)}] 連接埠 {port} 監聽失敗:{bindError.Message}", this);
+            }
+        }
 
         public void Close()
         {

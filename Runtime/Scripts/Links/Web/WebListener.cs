@@ -90,7 +90,14 @@ namespace PinionCore.NetSync.Web
             _SendRate.Reset(UnityEngine.Time.realtimeSinceStartup);
             _ReceiveRate.Reset(UnityEngine.Time.realtimeSinceStartup);
             host.Listener.Add(listener);
-            listener.Tcp.Bind(port,5);
+            var bindError = listener.Tcp.Bind(port, 5);
+            if (bindError != null)
+            {
+                host.Listener.Remove(listener);
+                listener.Tcp.Close();
+                UnityEngine.Debug.LogError($"[{nameof(WebListener)}] 連接埠 {port} 監聽失敗:{bindError.Message}", this);
+                return;
+            }
 
             listener.DataReceivedEvent += _Receive;
             listener.DataSentEvent += _Send;
