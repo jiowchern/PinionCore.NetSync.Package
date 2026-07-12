@@ -9,15 +9,15 @@ using UnityEngine;
 
 namespace PinionCore.NetSync
 {
-    public class Client : MonoBehaviour, IConnectableAgent, IQueryerHost
+    public class Client : QueryerHost, IConnectableAgent
     {
-        
+
         PinionCore.Remote.Ghost.IAgent _Agent;
 
         public IProtocol Protocol => _GetProtocol();
 
         public ProtocolProvider Provider;
-        public PinionCore.Remote.INotifierQueryable Queryer => _QueryQueryer();
+        public override PinionCore.Remote.INotifierQueryable Queryer => _QueryQueryer();
 
         private Remote.Ghost.IAgent _QueryQueryer()
         {
