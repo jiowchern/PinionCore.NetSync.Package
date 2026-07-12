@@ -10,5 +10,11 @@ namespace PinionCore.NetSync
     public abstract class QueryerHost : MonoBehaviour, IQueryerHost
     {
         public abstract PinionCore.Remote.INotifierQueryable Queryer { get; }
+
+        /// <summary>
+        /// 實際承載連線的 host;轉發型(wrapper)子類覆寫此方法回傳被包裝的 host,
+        /// 讓使用端能在其 GameObject 上以 GetComponent 解析同物件的 Connector 等元件。
+        /// </summary>
+        public virtual QueryerHost Resolve() => this;
     }
 }
