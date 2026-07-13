@@ -29,6 +29,9 @@ namespace PinionCore.NetSync.Consoles
         [Tooltip("IMGUI 視窗識別碼;同場景有多個視窗時需錯開。")]
         public int WindowId = 0;
 
+        [Tooltip("命令歷史保留筆數。")]
+        public int HistoryCapacity = 20;
+
         readonly Queue<string> _Messages;
         readonly object _MessagesLock;
         // Layout pass 的訊息快照;Repaint 沿用同一份,兩個 pass 的控件數才會一致
@@ -45,6 +48,7 @@ namespace PinionCore.NetSync.Consoles
         string _CompletionApplied;
 
         PinionCore.Utility.Console _Console;
+        PinionCore.Utility.Doskey _Doskey;
         event PinionCore.Utility.Console.OnOutput _OutputEvent;
 
         public ConsoleView()
@@ -73,6 +77,16 @@ namespace PinionCore.NetSync.Consoles
             }
 
             return _Console;
+        }
+
+        PinionCore.Utility.Doskey _QueryDoskey()
+        {
+            if (_Doskey == null)
+            {
+                _Doskey = new PinionCore.Utility.Doskey(HistoryCapacity);
+            }
+
+            return _Doskey;
         }
 
         void _OnCommandRegister(string command, PinionCore.Utility.Command.CommandParameter ret, PinionCore.Utility.Command.CommandParameter[] args)
@@ -138,6 +152,22 @@ namespace PinionCore.NetSync.Consoles
                 if (current.keyCode == KeyCode.Tab)
                 {
                     _CycleCompletion(current.shift);
+                }
+
+                current.Use();
+            }
+
+            // ↑/↓ 叫回命令歷史(doskey);到頭/尾時 TryGetPrev/TryGetNext 回 null,不動作。
+            if (current != null && current.type == EventType.KeyDown &&
+                (current.keyCode == KeyCode.UpArrow || current.keyCode == KeyCode.DownArrow) &&
+                GUI.GetNameOfFocusedControl() == inputControlName)
+            {
+                var recalled = current.keyCode == KeyCode.UpArrow
+                    ? _QueryDoskey().TryGetPrev()
+                    : _QueryDoskey().TryGetNext();
+                if (recalled != null)
+                {
+                    _ApplyInput(recalled);
                 }
 
                 current.Use();
@@ -225,8 +255,13 @@ namespace PinionCore.NetSync.Consoles
                 _CompletionIndex = (_CompletionIndex + (reverse ? count - 1 : 1)) % count;
             }
 
-            _Input = _CompletionMatches[_CompletionIndex];
+            _ApplyInput(_CompletionMatches[_CompletionIndex]);
             _CompletionApplied = _Input;
+        }
+
+        void _ApplyInput(string text)
+        {
+            _Input = text;
 
             // 聚焦中的 TextField 以內部 TextEditor 狀態顯示,直接改 _Input 畫面不會更新,需同步。
             if (GUIUtility.GetStateObject(typeof(TextEditor), GUIUtility.keyboardControl) is TextEditor editor)
@@ -256,6 +291,8 @@ namespace PinionCore.NetSync.Consoles
             {
                 return;
             }
+
+            _QueryDoskey().Record(line);
 
             try
             {
