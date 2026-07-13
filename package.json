@@ -2,7 +2,7 @@
   "name": "com.pinioncore.netsync",
   "version": "0.0.1",
   "displayName": "PinionCore NetSync",
-  "description": "This is an network connection synchronization kid.\nFor details, see https://github.com/jiowchern/PinionCore.NetSync.",
+  "description": "This is a network connection synchronization kit.\nFor details, see https://github.com/jiowchern/PinionCore.NetSync.",
   "unity": "6000.4",
   "type": "library",
   "unityRelease": "10f1"

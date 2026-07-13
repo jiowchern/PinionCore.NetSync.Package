@@ -69,7 +69,7 @@ PinionCore NetSync 建立在 [PinionCore.Remote](https://github.com/jiowchern/Pi
 {
   "dependencies": {
     // Git 引用
-    "com.pinioncore.netsync": "https://github.com/jiowchern/PinionCore.NetSync.git?path=PinionCore.NetSync.Package"
+    "com.pinioncore.netsync": "https://github.com/jiowchern/PinionCore.NetSync.Package.git"
     // 或本機路徑引用：
     // "com.pinioncore.netsync": "file:../PinionCore.NetSync.Package"
   }

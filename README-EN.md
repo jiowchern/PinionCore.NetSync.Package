@@ -76,7 +76,7 @@ Add the dependency to your Unity project's `Packages/manifest.json`:
 {
   "dependencies": {
     // Git reference
-    "com.pinioncore.netsync": "https://github.com/jiowchern/PinionCore.NetSync.git?path=PinionCore.NetSync.Package"
+    "com.pinioncore.netsync": "https://github.com/jiowchern/PinionCore.NetSync.Package.git"
     // or a local path reference:
     // "com.pinioncore.netsync": "file:../PinionCore.NetSync.Package"
   }
