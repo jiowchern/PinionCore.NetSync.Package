@@ -33,7 +33,7 @@ compile time.
 ### 3. Focus on game logic, not networking boilerplate
 You only do three things: **(1)** define *what* to sync with an interface, **(2)** set the state on the Soul side,
 **(3)** read it on the Ghost side. Packets, serialization, and connection management are handled for you, and
-per-session lifecycle can be managed automatically by `UserProvider` in response to connect/disconnect events.
+per-session lifecycle is delivered through `Server.BinderEvent` — one event that fires on every connect/disconnect.
 
 ### 4. Swap the transport freely; the same game code runs everywhere
 | Transport | Components | Best for |
@@ -57,8 +57,10 @@ serializable `.asset` files:
 - Tweaking endpoints or protocols needs no code change and no recompile.
 
 ### 7. Built-in runtime diagnostics
-The Inspectors for `Server`, `Client`, and each Listener / Connector surface the protocol hash, ping, and
-bytes sent/received — handy for confirming both ends agree on the protocol and the link is healthy.
+The Inspectors for `Server`, `Client`, and each Listener / Connector surface the protocol hash, ping,
+connection status, and live traffic — total bytes sent/received plus a bytes-per-second rate — handy for
+confirming both ends agree on the protocol and the link is healthy. There is also an in-game
+[runtime console](#runtime-client-console) that can invoke any protocol method from a command line.
 
 ---
 
@@ -170,33 +172,43 @@ public class Player : IPlayer
 }
 ```
 
-The per-session lifecycle is handled by `Sessions.User`: `Initial(binder)` is called when a client connects —
-use `binder.Bind<T>()` there to decide which authoritative objects that session can see — and `Final(binder)` is
-called on disconnect:
+The per-session lifecycle is delivered by `Server.BinderEvent` (a `UnityEvent<Server.BinderCommand>`): it fires
+with `Status == Add` and an `ISessionBinder` when a client connects — use `binder.Bind<T>()` there to decide which
+authoritative objects that session can see — and with `Status == Remove` on disconnect:
 
 ```csharp
-using PinionCore.NetSync.Sessions;
-using PinionCore.Remote;
+using System.Collections.Generic;
+using PinionCore.NetSync;
+using UnityEngine;
 
-public class PlayerUser : User
+public class PlayerSessions : MonoBehaviour
 {
-    Player _Player;
-    ISoul _Soul;
+    public Server Server;
 
-    public override void Initial(ISessionBinder binder)
-    {
-        _Player = new Player();
-        _Soul = binder.Bind<IPlayer>(_Player); // register; the client receives Supply immediately
-    }
+    readonly Dictionary<PinionCore.Remote.ISessionBinder, Player> _Players
+        = new Dictionary<PinionCore.Remote.ISessionBinder, Player>();
 
-    public override void Final(ISessionBinder binder)
+    void OnEnable()  => Server.BinderEvent.AddListener(_OnBinder);
+    void OnDisable() => Server.BinderEvent.RemoveListener(_OnBinder);
+
+    void _OnBinder(Server.BinderCommand command)
     {
-        binder.Unbind(_Soul);                  // the client receives Unsupply
+        if (command.Status == Server.BinderCommand.OperatorStatus.Add)
+        {
+            var player = new Player();
+            command.Binder.Bind<IPlayer>(player); // register; the client receives Supply immediately
+            _Players.Add(command.Binder, player);
+        }
+        else // Remove — the session is gone; its bound objects are released automatically
+        {
+            _Players.Remove(command.Binder);
+        }
     }
 }
 ```
 
-Turn `PlayerUser` into a **User prefab**.
+While a session is alive you can keep calling `Bind<T>()` / `Unbind()` on its binder at any time — each `Bind`
+raises `Supply` on that client, each `Unbind` raises `Unsupply`.
 
 **Client side**: query the protocol interface directly on `Client.Queryer` and subscribe to `Supply` / `Unsupply`:
 
@@ -231,11 +243,12 @@ On a GameObject:
 1. Add the `Server` component and assign `GameProtocol.asset` to its **Provider** field.
 2. Add a listener (e.g. `Tcp.TcpListener`), create a `Tcp Connection Config` asset
    (Create → `PinionCore/NetSync/Tcp Connection Config`, set the Port), assign it to the listener's **Config**
-   field, and call `Bind()` during initialization.
-3. Add `Sessions.UserProvider`, point its `Server` field at the server, and assign the **User prefab** above.
+   field, and call `Bind()` during initialization — or attach `Kits.TcpStartToBind` to bind automatically
+   on `Start` and close the listener on destroy.
+3. Add the `PlayerSessions` component above and point its `Server` field at the server.
 
-When a client connects, `UserProvider` automatically instantiates one User prefab for that session and calls
-`Initial(binder)`; on disconnect it calls `Final(binder)` and destroys the instance.
+When a client connects, `Server.BinderEvent` fires with `Add` and that session's binder; on disconnect it
+fires again with `Remove`.
 
 ### Step 5 — Set up the client scene
 On a GameObject:
@@ -249,7 +262,9 @@ Once connected, objects the server `Bind`s arrive through the `Supply` event; `U
 
 ### Step 6 — Run
 Start the server scene first (`Bind()`), then the client scene (`Connect()`). To verify everything in a single
-scene without opening sockets, swap the transport for `Standalone.Listener` / `Standalone.Connector`.
+scene without opening sockets, swap the transport for `Standalone.Listener` / `Standalone.Connector` — note that
+`Standalone.Connector.Connect(listener)` takes the target `Standalone.Listener` as a parameter instead of a
+config asset (`Kits.StandaloneStartToConnect` wires the pair up automatically on `Start`).
 
 ---
 
@@ -264,15 +279,19 @@ Runtime/Scripts/
 │   ├── Standalone/        In-process loopback transport
 │   ├── Tcp/               TCP transport + TcpConnectionConfig
 │   ├── Web/               WebSocket transport + WebConnectionConfig
-│   └── Gateway/           Distributed routing gateway (GatewayRouter, GatewayRegistry, GatewayClient)
-└── Sessions/              Per-session lifecycle (User, UserProvider)
+│   ├── Gateway/           Distributed routing gateway (GatewayRouter, GatewayRegistry, GatewayClient)
+│   └── Kit/               Auto-wiring helpers (TcpStartToBind, WebStartToBind, Standalone kits)
+└── Console/               In-game runtime console (ConsoleView, ClientConsole)
 ```
 
 - **Soul**: the server-side authoritative object (a plain C# object implementing a protocol interface) that runs
   the real game logic; registered with `ISessionBinder.Bind<T>()`.
 - **Ghost**: the client-side proxy that reflects server state; obtained via `Queryer.QueryNotifier<T>()`.
-- **User / UserProvider**: instantiate/destroy a User prefab per connection, delivering the `Initial` / `Final`
-  lifecycle of each session.
+- **Server.BinderEvent**: the per-session lifecycle entry point — fires `Add` / `Remove` with each session's
+  `ISessionBinder` on connect / disconnect.
+- **Kits** (`PinionCore.NetSync.Kits`): tiny MonoBehaviours that remove startup boilerplate —
+  `TcpStartToBind` / `WebStartToBind` / `StandaloneStartToBind` call `Bind()` on `Start` and close the listener
+  on destroy; `StandaloneStartToConnect` connects a `Standalone.Connector` to its `Listener` on `Start`.
 
 ---
 
@@ -332,8 +351,8 @@ An endpoint can host **multiple listeners at once** (e.g. Session serving both T
 
 On a single GameObject:
 
-1. `Server` — assign the protocol asset; `UserProvider` etc. work unchanged. **No public-facing listener is
-   needed** — player connections arrive through the Router.
+1. `Server` — assign the protocol asset; `BinderEvent` session handling works unchanged. **No public-facing
+   listener is needed** — player connections arrive through the Router.
 2. `GatewayRegistry` — assign the **same** protocol asset and set the `Group`.
 3. A connector (e.g. `Tcp.TcpConnector` with a config pointing at the Router's **Registry** endpoint) — call
    `Connect()` to register.
@@ -363,6 +382,36 @@ gatewayClient.Queryer.QueryNotifier<IPlayer>().Supply += player => { /* ... */ }
 - For end-to-end references see the package test `Tests/GatewayTests.cs`: one test assembles everything in a
   single scene over the Standalone transport, another drives real TCP connections — both covering
   Router → Registry registration → client connection → cross-router RMI.
+
+---
+
+## Runtime client console
+
+The `PinionCore.NetSync.Consoles` namespace provides an in-game console (IMGUI) for driving a client without
+writing any UI — connect, inspect status, and **invoke any protocol method or read any replicated property from a
+command line**. Add two components to a GameObject:
+
+1. **`ConsoleView`** — the on-screen console window. Fields: `Title`, `MaxLineCount`, `ShowPinionCoreLog`
+   (mirror `PinionCore.Utility.Log` into the window), `Visible`, and `WindowId` (offset it when a scene has
+   several windows). Supports **Tab completion** of registered command names.
+2. **`ClientConsole`** — binds a client to the view. Assign `View`, `Protocol` (the ProtocolProvider asset), and
+   `QueryerHost` (any `IQueryerHost` — a `Client` or a `Gateways.GatewayClient`). Optionally assign the connector
+   living on the same GameObject (`TcpConnector`, `WebConnector`, or `StandaloneConnector`) to unlock connection
+   commands.
+
+Built-in commands (registered according to which connectors are assigned):
+
+| Command | Requires | Effect |
+|---------|----------|--------|
+| `ping` / `hash` | — | Show the current ping / protocol version hash |
+| `connect <ip> <port>` / `connect-config` | `TcpConnector` | TCP connect by address or by the assigned config asset |
+| `connect-web <url>` / `connect-web-config` | `WebConnector` | WebSocket connect (use this on WebGL — TCP is unavailable in browsers) |
+| `connect-standalone` | `StandaloneConnector` | Connect to the assigned `StandaloneListener`, or find one by `StandaloneSceneName` / `StandaloneObjectName` |
+| `disconnect` / `status` | any connector | Drop the link / show connection status |
+
+On top of these, `ClientConsole` watches **every interface in the protocol**: whenever a Ghost arrives it
+auto-registers `InterfaceName.MemberName` commands, so you can call remote methods and read replicated
+properties interactively — handy for smoke-testing a server without building a client UI first.
 
 ---
 
