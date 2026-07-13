@@ -28,7 +28,8 @@ PinionCore NetSync 建立在 [PinionCore.Remote](https://github.com/jiowchern/Pi
 
 ### 3. 專注遊戲邏輯，不寫網路樣板
 你只需要三件事：**(1)** 用介面定義「要同步什麼」、**(2)** 在 Soul 端設定狀態、**(3)** 在 Ghost 端讀取。
-封包、序列化、連線管理全部由套件處理。連線（session）的生命週期則可交由 `UserProvider` 依上下線事件自動管理。
+封包、序列化、連線管理全部由套件處理。連線（session）的生命週期則由 `Server.BinderEvent`
+一個事件承接——每次上線／斷線都會觸發。
 
 ### 4. 傳輸層可隨意抽換，同一份遊戲程式碼通吃
 | 傳輸層 | 元件 | 適用場景 |
@@ -50,8 +51,9 @@ PinionCore NetSync 建立在 [PinionCore.Remote](https://github.com/jiowchern/Pi
 - 端點、協議的調整不必動程式碼、不必重新編譯。
 
 ### 7. 內建執行時診斷
-`Server`、`Client`、各 Listener / Connector 的 Inspector 直接顯示協議雜湊、Ping、收送位元組數，
-方便確認兩端協議是否一致、連線是否正常。
+`Server`、`Client`、各 Listener / Connector 的 Inspector 直接顯示協議雜湊、Ping、連線狀態與即時流量
+——收送位元組總數加上每秒傳輸速率，方便確認兩端協議是否一致、連線是否正常。
+另有[執行時主控台](#執行時客戶端主控台)，可從遊戲內的命令列直接呼叫任何協議方法。
 
 ---
 
@@ -160,32 +162,43 @@ public class Player : IPlayer
 }
 ```
 
-連線的生命週期由 `Sessions.User` 承接：客戶端連上時 `Initial(binder)` 被呼叫，
-在這裡用 `binder.Bind<T>()` 決定要讓這條連線看見哪些權威物件；斷線時 `Final(binder)` 被呼叫：
+連線的生命週期由 `Server.BinderEvent`（`UnityEvent<Server.BinderCommand>`）承接：客戶端連上時以
+`Status == Add` 觸發並帶著該連線的 `ISessionBinder`，在這裡用 `binder.Bind<T>()` 決定要讓這條連線
+看見哪些權威物件；斷線時以 `Status == Remove` 再次觸發：
 
 ```csharp
-using PinionCore.NetSync.Sessions;
-using PinionCore.Remote;
+using System.Collections.Generic;
+using PinionCore.NetSync;
+using UnityEngine;
 
-public class PlayerUser : User
+public class PlayerSessions : MonoBehaviour
 {
-    Player _Player;
-    ISoul _Soul;
+    public Server Server;
 
-    public override void Initial(ISessionBinder binder)
-    {
-        _Player = new Player();
-        _Soul = binder.Bind<IPlayer>(_Player); // 註冊權威物件，客戶端立即收到 Supply
-    }
+    readonly Dictionary<PinionCore.Remote.ISessionBinder, Player> _Players
+        = new Dictionary<PinionCore.Remote.ISessionBinder, Player>();
 
-    public override void Final(ISessionBinder binder)
+    void OnEnable()  => Server.BinderEvent.AddListener(_OnBinder);
+    void OnDisable() => Server.BinderEvent.RemoveListener(_OnBinder);
+
+    void _OnBinder(Server.BinderCommand command)
     {
-        binder.Unbind(_Soul);                  // 客戶端收到 Unsupply
+        if (command.Status == Server.BinderCommand.OperatorStatus.Add)
+        {
+            var player = new Player();
+            command.Binder.Bind<IPlayer>(player); // 註冊權威物件，客戶端立即收到 Supply
+            _Players.Add(command.Binder, player);
+        }
+        else // Remove——連線已結束，其上綁定的物件會隨連線自動釋放
+        {
+            _Players.Remove(command.Binder);
+        }
     }
 }
 ```
 
-把 `PlayerUser` 做成 **User 預置物**。
+連線存活期間可以隨時對它的 binder 呼叫 `Bind<T>()` / `Unbind()`——每次 `Bind` 會在該客戶端觸發
+`Supply`，每次 `Unbind` 觸發 `Unsupply`。
 
 **客戶端**：直接向 `Client.Queryer` 查詢協議介面，訂閱 `Supply` / `Unsupply`：
 
@@ -220,11 +233,10 @@ public class PlayerGhost : MonoBehaviour
 1. 加入 `Server` 元件，把 `GameProtocol.asset` 指派到它的 **Provider** 欄位。
 2. 加入一個 Listener（例如 `Tcp.TcpListener`），建立一顆 `Tcp Connection Config` 資產
    （右鍵 → Create → `PinionCore/NetSync/Tcp Connection Config`，設定 Port），指派到 Listener 的 **Config** 欄位，
-   並在初始化時呼叫 `Bind()`。
-3. 加入 `Sessions.UserProvider`，把 `Server` 指給它，並指定上面的 **User 預置物**。
+   並在初始化時呼叫 `Bind()`——或掛上 `Kits.TcpStartToBind`，Start 時自動 Bind、物件銷毀時自動關閉。
+3. 加入上面的 `PlayerSessions` 元件，把 `Server` 指給它。
 
-當客戶端連上時，`UserProvider` 會自動為該連線實例化一份 User 預置物並呼叫 `Initial(binder)`；
-斷線時呼叫 `Final(binder)` 並銷毀。
+當客戶端連上時，`Server.BinderEvent` 會以 `Add` 帶著該連線的 binder 觸發；斷線時以 `Remove` 再次觸發。
 
 ### Step 5 — 架設客戶端場景
 在一個 GameObject 上：
@@ -238,7 +250,9 @@ public class PlayerGhost : MonoBehaviour
 
 ### Step 6 — 執行
 先跑伺服器場景（`Bind()`），再跑客戶端場景（`Connect()`）。
-若要在單一場景內快速驗證、不開 socket，把傳輸層換成 `Standalone.Listener` / `Standalone.Connector` 即可。
+若要在單一場景內快速驗證、不開 socket，把傳輸層換成 `Standalone.Listener` / `Standalone.Connector` 即可
+——注意 `Standalone.Connector.Connect(listener)` 的參數是目標 `Standalone.Listener` 而非 Config 資產
+（掛 `Kits.StandaloneStartToConnect` 可在 Start 時自動接上這一對）。
 
 ---
 
@@ -253,13 +267,18 @@ Runtime/Scripts/
 │   ├── Standalone/        行程內回送傳輸
 │   ├── Tcp/               TCP 傳輸 + TcpConnectionConfig
 │   ├── Web/               WebSocket 傳輸 + WebConnectionConfig
-│   └── Gateway/           分散式路由閘道 (GatewayRouter, GatewayRegistry, GatewayClient)
-└── Sessions/              連線生命週期 (User, UserProvider)
+│   ├── Gateway/           分散式路由閘道 (GatewayRouter, GatewayRegistry, GatewayClient)
+│   └── Kit/               自動接線輔助元件 (TcpStartToBind, WebStartToBind, Standalone kits)
+└── Console/               遊戲內執行時主控台 (ConsoleView, ClientConsole)
 ```
 
 - **Soul**：伺服器端權威物件（實作協議介面的普通 C# 物件），執行真正的遊戲邏輯，用 `ISessionBinder.Bind<T>()` 註冊。
 - **Ghost**：客戶端代理物件，反映伺服器狀態，透過 `Queryer.QueryNotifier<T>()` 取得。
-- **User / UserProvider**：依連線事件自動實例化／銷毀 User 預置物，承接每條連線的 `Initial` / `Final` 生命週期。
+- **Server.BinderEvent**：連線生命週期的進入點——每條連線上線／斷線時以 `Add` / `Remove`
+  帶著該連線的 `ISessionBinder` 觸發。
+- **Kits**（`PinionCore.NetSync.Kits`）：消除啟動樣板的小型 MonoBehaviour——
+  `TcpStartToBind` / `WebStartToBind` / `StandaloneStartToBind` 在 Start 呼叫 `Bind()`、銷毀時關閉 Listener；
+  `StandaloneStartToConnect` 在 Start 把 `Standalone.Connector` 接上它的 `Listener`。
 
 ---
 
@@ -319,7 +338,7 @@ GatewayRouter (GameObject)
 
 在同一個 GameObject 上：
 
-1. `Server` —— 指派協議資產，`UserProvider` 等照常使用。**不需要**再掛對外的 Listener，玩家連線由 Router 轉送進來。
+1. `Server` —— 指派協議資產，`BinderEvent` 的連線處理照常使用。**不需要**再掛對外的 Listener，玩家連線由 Router 轉送進來。
 2. `GatewayRegistry` —— 指派**同一顆**協議資產、設定 `Group`。
 3. Connector（例如 `Tcp.TcpConnector`，Config 指向 Router 的 **Registry** 端點）—— 呼叫 `Connect()` 完成註冊。
 
@@ -345,6 +364,33 @@ gatewayClient.Queryer.QueryNotifier<IPlayer>().Supply += player => { /* ... */ }
 - Router 本身不需要協議資產，可獨立佈署於任何 Unity 執行個體（headless 亦可）。
 - 完整流程可參考套件測試 `Tests/GatewayTests.cs`：包含 Standalone 傳輸與真實 TCP 連線
   兩種端對端測試，皆跑通 Router → Registry 註冊 → 客戶端連線 → 跨路由 RMI。
+
+---
+
+## 執行時客戶端主控台
+
+`PinionCore.NetSync.Consoles` 命名空間提供遊戲內主控台（IMGUI）——不寫任何 UI 就能驅動客戶端：
+連線、查看狀態，甚至**從命令列直接呼叫協議方法、讀取同步屬性**。在 GameObject 上加兩個元件：
+
+1. **`ConsoleView`** —— 畫面上的主控台視窗。欄位：`Title`、`MaxLineCount`、`ShowPinionCoreLog`
+   （把 `PinionCore.Utility.Log` 的訊息鏡射到視窗）、`Visible`、`WindowId`（同場景多個視窗時需錯開）。
+   支援已註冊指令名稱的 **Tab 補完**。
+2. **`ClientConsole`** —— 把客戶端接上視窗。指派 `View`、`Protocol`（ProtocolProvider 資產）與
+   `QueryerHost`（任何 `IQueryerHost`——`Client` 或 `Gateways.GatewayClient`）。
+   選填指派同物件上的 Connector（`TcpConnector`、`WebConnector` 或 `StandaloneConnector`）即可解鎖連線指令。
+
+內建指令（依指派的 Connector 註冊）：
+
+| 指令 | 需要 | 效果 |
+|------|------|------|
+| `ping` / `hash` | — | 顯示目前 Ping ／ 協議版本雜湊 |
+| `connect <ip> <port>` / `connect-config` | `TcpConnector` | 以位址或指派的 Config 資產做 TCP 連線 |
+| `connect-web <url>` / `connect-web-config` | `WebConnector` | WebSocket 連線（WebGL 請用這組——瀏覽器不支援 TCP） |
+| `connect-standalone` | `StandaloneConnector` | 連上指派的 `StandaloneListener`，或依 `StandaloneSceneName` / `StandaloneObjectName` 查找 |
+| `disconnect` / `status` | 任一 Connector | 斷線 ／ 顯示連線狀態 |
+
+除此之外，`ClientConsole` 會監看**協議中的所有介面**：Ghost 送達時自動註冊「`介面名.成員名`」指令，
+可互動式呼叫遠端方法、讀取同步屬性——在客戶端 UI 還沒做出來之前就能對伺服器做煙霧測試。
 
 ---
 
