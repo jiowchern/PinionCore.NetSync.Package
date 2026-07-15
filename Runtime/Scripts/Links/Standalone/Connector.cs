@@ -17,6 +17,12 @@ namespace PinionCore.NetSync.Standalone
 
         System.Action _Disconnect;
 
+        [Tooltip("模擬單向延遲(秒),雙向各套用,RTT ≈ 2×Lag。0 = 不延遲。")]
+        [Min(0)] public float Lag;
+
+        LagStreamable _ClientLag;
+        LagStreamable _ServerLag;
+
         [CreateProperty] public ConnectorStatus CurrentStatus { get; private set; }
         [CreateProperty] public long BytesReceived { get; private set; }
         [CreateProperty] public long BytesSent { get; private set; }
@@ -52,26 +58,32 @@ namespace PinionCore.NetSync.Standalone
             }
             var steam = new PinionCore.Network.Stream();
             var reverseStream = new ReverseStream(steam);
-            listener.Add(reverseStream);
+            var serverLag = new LagStreamable(reverseStream, _GetLag);
+            listener.Add(serverLag);
 
             BytesSent = 0;
             BytesReceived = 0;
             _SendRate.Reset(UnityEngine.Time.realtimeSinceStartup);
             _ReceiveRate.Reset(UnityEngine.Time.realtimeSinceStartup);
-            var metered = new MeteredStreamable(steam);
+            var clientLag = new LagStreamable(steam, _GetLag);
+            var metered = new MeteredStreamable(clientLag);
             metered.SendEvent += _Send;
             metered.ReceiveEvent += _Receive;
 
             agent.Enable(metered);
+            _ClientLag = clientLag;
+            _ServerLag = serverLag;
             _Connecting = true;
             CurrentStatus = ConnectorStatus.Online;
 
             _Disconnect = () =>
             {
                 agent.Disable();
-                listener.Remove(reverseStream);
+                listener.Remove(serverLag);
                 metered.SendEvent -= _Send;
                 metered.ReceiveEvent -= _Receive;
+                _ClientLag = null;
+                _ServerLag = null;
                 _Connecting = false;
                 CurrentStatus = ConnectorStatus.Offline;
             };
@@ -80,6 +92,8 @@ namespace PinionCore.NetSync.Standalone
 
         public void Update()
         {
+            _ClientLag?.Update();
+            _ServerLag?.Update();
             _SendRate.Update(BytesSent, UnityEngine.Time.realtimeSinceStartup);
             _ReceiveRate.Update(BytesReceived, UnityEngine.Time.realtimeSinceStartup);
         }
@@ -107,6 +121,11 @@ namespace PinionCore.NetSync.Standalone
         private void _Receive(int bytes)
         {
             BytesReceived += bytes;
+        }
+
+        private float _GetLag()
+        {
+            return Lag;
         }
 
 

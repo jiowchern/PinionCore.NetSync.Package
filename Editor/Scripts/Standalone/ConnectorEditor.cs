@@ -1,6 +1,7 @@
 using PinionCore.NetSync.Extensions;
 using PinionCore.NetSync.Standalone;
 using UnityEditor;
+using UnityEditor.UIElements;
 using UnityEngine.UIElements;
 
 namespace PinionCore.NetSync.Editor.Standalone
@@ -23,6 +24,10 @@ namespace PinionCore.NetSync.Editor.Standalone
             if (root == null)
                 return base.CreateInspectorGUI();
             root.CloneTree(element);
+
+            var lagField = new PropertyField(serializedObject.FindProperty(nameof(_Target.Lag)));
+            lagField.Bind(serializedObject);
+            element.Insert(0, lagField);
 
             var status = element.Q<Label>("Status");
             status.SetTextBinding(_Target, nameof(_Target.CurrentStatus), BindingMode.ToTarget);
