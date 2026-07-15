@@ -24,7 +24,12 @@ namespace PinionCore.NetSync
 
             if (_Agent == null)
             {
-                _Agent = new PinionCore.Remote.Ghost.Agent(_GetProtocol());
+                var agent = new PinionCore.Remote.Ghost.Agent(_GetProtocol());
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                // RPC 錯誤(如 Soul not found)訊息附上呼叫端堆疊;每次帶回傳 RPC 有捕捉成本,僅除錯環境開啟
+                agent.RpcCallerStackTraceEnabled = true;
+#endif
+                _Agent = agent;
             }
 
             return _Agent;
