@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Net;
 
 using PinionCore.NetSync.Extensions;
-
+using PinionCore.Utility;
 using UnityEngine;
 
 namespace PinionCore.NetSync.Consoles
@@ -142,7 +142,11 @@ namespace PinionCore.NetSync.Consoles
             _WebConnector = null;
             _StandaloneConnector = null;
         }
-
+       
+        public ICommand GetCommand()
+        {
+            return View.Command;
+        }
         void _Register(string name, System.Action executer)
         {
             View.Command.Register(name, executer);
@@ -281,4 +285,6 @@ namespace PinionCore.NetSync.Consoles
             View.WriteLine("web connection break.");
         }
     }
+
+    
 }
