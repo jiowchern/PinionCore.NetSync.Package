@@ -26,6 +26,9 @@ namespace PinionCore.NetSync.Consoles
         [Tooltip("是否顯示主控台視窗。")]
         public bool Visible = true;
 
+        [Tooltip("切換視窗顯示的按鍵;None 表示不啟用切換。")]
+        public KeyCode ToggleKey = KeyCode.BackQuote;
+
         [Tooltip("IMGUI 視窗識別碼;同場景有多個視窗時需錯開。")]
         public int WindowId = 0;
 
@@ -124,6 +127,18 @@ namespace PinionCore.NetSync.Consoles
 
         void OnGUI()
         {
+            // 走 IMGUI 事件而非 Input API:不依賴 legacy/InputSystem 後端,
+            // 且輸入框聚焦中也能收到(Use 掉避免 ` 字元進入輸入框)。
+            Event toggleEvent = Event.current;
+            if (ToggleKey != KeyCode.None &&
+                toggleEvent != null && toggleEvent.type == EventType.KeyDown && toggleEvent.keyCode == ToggleKey)
+            {
+                Visible = !Visible;
+                // 放開鍵盤焦點:避免緊接的 character 事件把 ` 打進殘留焦點的輸入框
+                GUIUtility.keyboardControl = 0;
+                toggleEvent.Use();
+            }
+
             if (!Visible)
             {
                 return;
