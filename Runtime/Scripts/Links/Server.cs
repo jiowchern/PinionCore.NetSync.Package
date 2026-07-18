@@ -32,8 +32,7 @@ namespace PinionCore.NetSync
         public UnityEngine.Events.UnityEvent<BinderCommand> BinderEvent = new UnityEngine.Events.UnityEvent<BinderCommand>();
         private PinionCore.Remote.Soul.SessionEngine _Engine;
         private PinionCore.Remote.Soul.ServiceUpdateLoop _Loop;
-        // 封包迴圈執行緒派發過來的 client 請求,在主執行緒 Update 依序執行(遊戲邏輯不可跨執行緒)
-        private readonly System.Collections.Concurrent.ConcurrentQueue<System.Action> _RequestActions;
+        private readonly FrameThreading _Threading;
 
         public static bool EnableLog = false;
         [UnityEngine.RuntimeInitializeOnLoadMethod()]
@@ -49,7 +48,7 @@ namespace PinionCore.NetSync
         public Server() {
 
             _BinderOperator = new System.Collections.Concurrent.ConcurrentQueue<BinderCommand>();
-            _RequestActions = new System.Collections.Concurrent.ConcurrentQueue<System.Action>();
+            _Threading = new FrameThreading();
             Listener = new Linstener();
         }
          [CreateProperty] public string Hash => Protocol != null ? Protocol.VersionCode.ToHexString() : "null";
@@ -72,10 +71,7 @@ namespace PinionCore.NetSync
         public void Update()
         {
             // 先請求後 binder,對應舊版 _Service.Update()(處理請求)先於 binder drain 的順序
-            while (_RequestActions.TryDequeue(out var action))
-            {
-                action();
-            }
+            _Threading.Update();
             while (_BinderOperator.TryDequeue(out var op))
             {
                 BinderEvent.Invoke(op);
@@ -99,10 +95,9 @@ namespace PinionCore.NetSync
 
         public void Start()
         {
-            // 封包收送由 ServiceUpdateLoop 的背景執行緒驅動(無 SynchronizationContext,
-            // continuation 走 thread pool,不吃 frame 節奏);client 請求經 dispatcher 回主執行緒
-            _Engine = new PinionCore.Remote.Soul.SessionEngine(this, Protocol, new Serializer(Protocol.SerializeTypes), new PinionCore.Remote.InternalSerializer(), PinionCore.Memorys.PoolProvider.Shared,
-                requestDispatcher: action => _RequestActions.Enqueue(action));
+            // 封包收送由 ServiceUpdateLoop 的背景執行緒驅動,不吃 frame 節奏;
+            // 請求消化與幫浦啟動政策由 FrameThreading 決定
+            _Engine = new PinionCore.Remote.Soul.SessionEngine(this, Protocol, new Serializer(Protocol.SerializeTypes), new PinionCore.Remote.InternalSerializer(), PinionCore.Memorys.PoolProvider.Shared, _Threading);
             _Loop = new PinionCore.Remote.Soul.ServiceUpdateLoop(_Engine);
 
             PinionCore.Remote.Soul.IService service = _Loop;
