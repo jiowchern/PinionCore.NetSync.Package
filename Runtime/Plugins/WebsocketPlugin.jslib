@@ -71,7 +71,8 @@ var LibraryWebSocket = {
       if (webSocketState.debug) console.log("[JSLIB WebSocket] Connected.");
 
       if (webSocketState.onOpen) {
-        dynCall('vi', webSocketState.onOpen, [instanceId]);
+        // dynCall 已自新版 Emscripten 移除(Unity 6 執行期是 ReferenceError),改用 makeDynCall 宏
+        {{{ makeDynCall('vi', 'webSocketState.onOpen') }}}(instanceId);
       }
     };
 
@@ -86,7 +87,7 @@ var LibraryWebSocket = {
         HEAPU8.set(dataBuffer, buffer);
 
         try {
-          dynCall('viii', webSocketState.onMessage, [instanceId, buffer, dataBuffer.length]);
+          {{{ makeDynCall('viii', 'webSocketState.onMessage') }}}(instanceId, buffer, dataBuffer.length);
         } finally {
           _free(buffer);
         }
@@ -96,7 +97,7 @@ var LibraryWebSocket = {
         HEAPU8.set(dataBuffer, buffer);
 
         try {
-          dynCall('viii', webSocketState.onMessage, [instanceId, buffer, dataBuffer.length]);
+          {{{ makeDynCall('viii', 'webSocketState.onMessage') }}}(instanceId, buffer, dataBuffer.length);
         } finally {
           _free(buffer);
         }
@@ -113,7 +114,7 @@ var LibraryWebSocket = {
         stringToUTF8(msg, buffer, length);
 
         try {
-          dynCall('vii', webSocketState.onError, [instanceId, buffer]);
+          {{{ makeDynCall('vii', 'webSocketState.onError') }}}(instanceId, buffer);
         } finally {
           _free(buffer);
         }
@@ -124,7 +125,7 @@ var LibraryWebSocket = {
       if (webSocketState.debug) console.log("[JSLIB WebSocket] Closed.");
 
       if (webSocketState.onClose) {
-        dynCall('vii', webSocketState.onClose, [instanceId, ev.code]);
+        {{{ makeDynCall('vii', 'webSocketState.onClose') }}}(instanceId, ev.code);
       }
 
       delete instance.ws;
