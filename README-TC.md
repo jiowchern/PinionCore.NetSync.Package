@@ -34,7 +34,8 @@ PinionCore NetSync 建立在 [PinionCore.Remote](https://github.com/jiowchern/Pi
 ### 4. 傳輸層可隨意抽換，同一份遊戲程式碼通吃
 | 傳輸層 | 元件 | 適用場景 |
 |--------|------|----------|
-| **Standalone** | `Standalone.Connector` / `Standalone.Listener` | 行程內回送：編輯器內測試、單機模擬、單元測試，**完全不開 socket** |
+| **Direct** | `Direct.DirectConnector` / `Direct.DirectClient` | 零序列化直通：ghost 即 Soul 本體（共用參考），**不需協議資產**；編輯器最速迭代、單元測試。不驗證可序列化性，上線前仍須以其他傳輸整合測試 |
+| **Standalone** | `Standalone.Connector` / `Standalone.Listener` | 行程內回送：編輯器內測試、單機模擬、單元測試，**完全不開 socket**（序列化管線照跑） |
 | **TCP** | `Tcp.TcpConnector` / `Tcp.TcpListener` | 可靠、有序的預設傳輸 |
 | **WebSocket** | `Web.WebConnector` / `Web.WebListener` | WebGL 平台、需穿越防火牆 |
 
@@ -254,6 +255,18 @@ public class PlayerGhost : MonoBehaviour
 ——注意 `Standalone.Connector.Connect(listener)` 的參數是目標 `Standalone.Listener` 而非 Config 資產
 （掛 `Kits.StandaloneStartToConnect` 可在 Start 時自動接上這一對）。
 
+### 附註 — Direct 直通模式（最速迭代）
+連協議資產都不想等時，可改用 `Direct` 傳輸:客戶端物件掛 `Direct.DirectClient` + `Direct.DirectConnector`
+（`DirectClient` **不需要** Provider),呼叫 `DirectConnector.Connect(server)` 直接接上目標 `Server`
+（掛 `Kits.DirectStartToConnect` 可在 Start 自動接上;跨場景目標可用 `Direct.DirectServerLocator` 查找）。
+`Server.BinderEvent` 與 `Queryer.QueryNotifier<T>()` 的用法完全不變,但 Supply 取得的 ghost
+**就是伺服器端 Soul 實例本身**（零序列化、共用參考,方法呼叫是同步 .NET 呼叫）。
+
+注意:
+- Direct 模式**不驗證可序列化性**——在此能跑的協議介面不代表可遠端化,上線前仍須以 Standalone/TCP 整合測試。
+- `Server.Provider` 仍必須指派(Server 啟動時無條件建立序列化引擎)。
+- `Ping` 恆為 0,`VersionCodeError` / `ErrorMethod` / `Exception` 事件永不觸發,依賴這些訊號的斷線偵測在此模式下無效。
+
 ---
 
 ## 架構一覽
@@ -264,6 +277,7 @@ Runtime/Scripts/
 │   ├── Server / Client    PinionCore.Remote 的 Unity 進入點 (MonoBehaviour)
 │   ├── ProtocolProvider   協議來源抽象 (ScriptableObject)
 │   ├── ConnectionConfig   連線端點抽象 (ScriptableObject)
+│   ├── Direct/            零序列化直通 (DirectClient, DirectConnector, DirectServerLocator)
 │   ├── Standalone/        行程內回送傳輸
 │   ├── Tcp/               TCP 傳輸 + TcpConnectionConfig
 │   ├── Web/               WebSocket 傳輸 + WebConnectionConfig

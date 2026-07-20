@@ -37,7 +37,8 @@ per-session lifecycle is delivered through `Server.BinderEvent` — one event th
 
 ### 4. Swap the transport freely; the same game code runs everywhere
 | Transport | Components | Best for |
-|-----------|-----------|----------|
+|--------|------|----------|
+| **Direct** | `Direct.DirectConnector` / `Direct.DirectClient` | Zero-serialization passthrough: the ghost IS the server-side Soul instance (shared reference), **no protocol asset needed**; fastest in-editor iteration and unit tests. Does not validate serializability — still integration-test over another transport before shipping |
 | **Standalone** | `Standalone.Connector` / `Standalone.Listener` | In-process loopback: in-editor testing, single-player simulation, unit tests — **no sockets at all** |
 | **TCP** | `Tcp.TcpConnector` / `Tcp.TcpListener` | Reliable, ordered default transport |
 | **WebSocket** | `Web.WebConnector` / `Web.WebListener` | WebGL builds, firewall traversal |
@@ -266,6 +267,21 @@ scene without opening sockets, swap the transport for `Standalone.Listener` / `S
 `Standalone.Connector.Connect(listener)` takes the target `Standalone.Listener` as a parameter instead of a
 config asset (`Kits.StandaloneStartToConnect` wires the pair up automatically on `Start`).
 
+### Note — Direct passthrough mode (fastest iteration)
+When you don't even want to wait for a protocol asset, use the `Direct` transport: put
+`Direct.DirectClient` + `Direct.DirectConnector` on the client object (`DirectClient` needs **no** Provider)
+and call `DirectConnector.Connect(server)` to attach straight to the target `Server`
+(`Kits.DirectStartToConnect` wires it on `Start`; `Direct.DirectServerLocator` can locate a cross-scene target).
+`Server.BinderEvent` and `Queryer.QueryNotifier<T>()` work unchanged, but the supplied ghost **is the
+server-side Soul instance itself** (zero serialization, shared reference; method calls are synchronous .NET calls).
+
+Caveats:
+- Direct mode does **not** validate serializability — a protocol interface that works here may not be
+  remotable; integration-test over Standalone/TCP before shipping.
+- `Server.Provider` must still be assigned (the server unconditionally builds its serialization engine on start).
+- `Ping` is always 0 and `VersionCodeError` / `ErrorMethod` / `Exception` events never fire, so
+  disconnect detection relying on those signals won't work in this mode.
+
 ---
 
 ## Architecture at a glance
@@ -276,6 +292,7 @@ Runtime/Scripts/
 │   ├── Server / Client    Unity entry points for PinionCore.Remote (MonoBehaviour)
 │   ├── ProtocolProvider   Protocol-source abstraction (ScriptableObject)
 │   ├── ConnectionConfig   Endpoint abstraction (ScriptableObject)
+│   ├── Direct/            Zero-serialization passthrough (DirectClient, DirectConnector, DirectServerLocator)
 │   ├── Standalone/        In-process loopback transport
 │   ├── Tcp/               TCP transport + TcpConnectionConfig
 │   ├── Web/               WebSocket transport + WebConnectionConfig

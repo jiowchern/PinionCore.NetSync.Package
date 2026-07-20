@@ -42,6 +42,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   既有子類需把 `override ... Create()` 改為 `override ... Get()`。
 
 ### Added
+- Direct 零序列化直通傳輸（`PinionCore.NetSync.Direct` 命名空間，封裝 `PinionCore.Remote.Standalone.DirectStandalone`）：
+  - `DirectClient`：取代 `Client` 的直通 ghost 查詢入口（`QueryerHost`），**不需要 ProtocolProvider**；
+    Supply 取得的 ghost 即伺服器端 Soul 實例本身（共用參考），方法呼叫是同步 .NET 呼叫。
+  - `DirectConnector`：`Connect(Server)` 直接把同物件上的 `DirectClient` 接上目標 `Server`（IEntry），
+    無 stream、無序列化；`DirectServerLocator` 支援跨場景查找目標 Server。
+  - `Kits.DirectStartToConnect`：Start 自動連線（伺服器端不需 Bind，無對應 StartToBind）。
+  - 適用：編輯器快速迭代、單元測試（不需重生協議）。**限制**：不驗證可序列化性
+    （在 Direct 能跑不代表可遠端化，上線前仍須以 Standalone/Tcp 整合測試）；
+    `Server.Provider` 仍必須指派（Server.Start 無條件建立 SessionEngine）；
+    `Ping` 恆為 0，`VersionCodeError` / `ErrorMethod` / `Exception` 事件永不觸發。
+  - 端到端測試 `Tests/DirectTests.cs`（共用參考驗證、斷線清理容忍、重連、晚訂閱補發）。
 - Protocol Provider 三件套產生精靈：`Tools / PinionCore / NetSync / Create Protocol Provider...`
   （亦可從 Project 視窗右鍵 Create 選單開啟），一鍵產生 `Creator` + `Provider` 並自動建立 `.asset`，
   並偵測目標 asmdef 是否 reference `PinionCore.NetSync`、提供一鍵補上參考。
